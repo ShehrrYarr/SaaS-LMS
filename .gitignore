@@ -12,8 +12,9 @@
 /node_modules
 
 # ── Build output ───────────────────────────────────────────────
-# Run `npm run build` after cloning to regenerate.
-/public/build
+# public/build IS committed: Namecheap shared hosting has no Node,
+# so compiled assets ship with the repo. Re-run `npm run build`
+# locally and commit whenever CSS/JS changes.
 /public/hot
 
 # ── Runtime & storage ──────────────────────────────────────────
