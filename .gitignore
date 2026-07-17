@@ -1,0 +1,54 @@
+# ── Environment & secrets ──────────────────────────────────────
+# .env holds the APP_KEY that encrypts every stored password
+# (lab admin / branch / superadmin recoverable passwords) — never commit it.
+.env
+.env.backup
+.env.production
+/auth.json
+/storage/*.key
+
+# ── Dependencies ───────────────────────────────────────────────
+/vendor
+/node_modules
+
+# ── Build output ───────────────────────────────────────────────
+# Run `npm run build` after cloning to regenerate.
+/public/build
+/public/hot
+
+# ── Runtime & storage ──────────────────────────────────────────
+# Tenant uploads (logos, signatures, result files) live in
+# storage/app/public/tenants and are excluded by storage's own
+# .gitignore files. The symlink below is created by `storage:link`.
+/public/storage
+/storage/pail
+*.log
+
+# ── Local databases ────────────────────────────────────────────
+# Production runs MySQL; any local sqlite scratch DB stays out.
+database/*.sqlite
+database/*.sqlite-journal
+
+# ── Test / scratch artifacts ───────────────────────────────────
+_sample_report.pdf
+
+# ── IDE & editor ───────────────────────────────────────────────
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+.phpactor.json
+
+# ── Claude Code (keep launch config, drop personal settings) ───
+.claude/settings.local.json
+
+# ── PHP tooling ────────────────────────────────────────────────
+/.phpunit.cache
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+
+# ── OS noise ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
