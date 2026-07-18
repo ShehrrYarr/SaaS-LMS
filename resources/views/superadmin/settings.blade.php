@@ -91,5 +91,49 @@
             </div>
         </form>
     </div>
+
+    {{-- Deployment tools --}}
+    <div class="glass-card p-8">
+        <div class="mb-6">
+            <h3 class="text-white font-semibold">Deployment Tools</h3>
+            <p class="text-white/40 text-sm mt-1">Run server maintenance commands without SSH. Typical update flow: <span class="font-mono text-xs">Git Pull → Migrate → Optimize</span>.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <form method="POST" action="{{ route('superadmin.settings.deploy.git-pull') }}"
+                  onsubmit="return confirm('Pull the latest code from GitHub?')">
+                @csrf
+                <button type="submit" class="btn-secondary w-full">
+                    <span class="block font-semibold">Git Pull</span>
+                    <span class="block text-xs opacity-60 mt-0.5">Fetch latest code</span>
+                </button>
+            </form>
+
+            <form method="POST" action="{{ route('superadmin.settings.deploy.migrate') }}"
+                  onsubmit="return confirm('Run database migrations? New tables/columns will be created.')">
+                @csrf
+                <button type="submit" class="btn-secondary w-full">
+                    <span class="block font-semibold">Migrate</span>
+                    <span class="block text-xs opacity-60 mt-0.5">Update database schema</span>
+                </button>
+            </form>
+
+            <form method="POST" action="{{ route('superadmin.settings.deploy.optimize') }}">
+                @csrf
+                <button type="submit" class="btn-secondary w-full">
+                    <span class="block font-semibold">Optimize</span>
+                    <span class="block text-xs opacity-60 mt-0.5">Clear &amp; rebuild caches</span>
+                </button>
+            </form>
+        </div>
+
+        @if(session('deploy_output'))
+        <div class="mt-6">
+            <p class="text-white/40 text-xs uppercase tracking-wider mb-2">Command Output</p>
+            <pre class="rounded-xl p-4 text-xs font-mono whitespace-pre-wrap overflow-x-auto"
+                 style="background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08); color: #6ee7b7; max-height: 320px; overflow-y: auto;">{{ session('deploy_output') }}</pre>
+        </div>
+        @endif
+    </div>
 </div>
 @endsection

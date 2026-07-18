@@ -26,5 +26,8 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
         Route::get('settings', [SettingsController::class, 'index'])->name('settings');
         Route::post('settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
         Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
+        Route::post('settings/deploy/migrate', [SettingsController::class, 'runMigrate'])->name('settings.deploy.migrate');
+        Route::post('settings/deploy/git-pull', [SettingsController::class, 'runGitPull'])->name('settings.deploy.git-pull');
+        Route::post('settings/deploy/optimize', [SettingsController::class, 'runOptimize'])->name('settings.deploy.optimize');
     });
 });
