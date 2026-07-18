@@ -30,6 +30,7 @@
             $features = [
                 ['Max Staff', $plan->max_staff >= 9999 ? 'Unlimited' : $plan->max_staff, true],
                 ['Max Patients', $plan->max_patients >= 9999 ? 'Unlimited' : $plan->max_patients, true],
+                ['Max Branches', $plan->max_branches < 1 ? 'No' : ($plan->max_branches >= 9999 ? 'Unlimited' : $plan->max_branches), $plan->max_branches > 0],
                 ['PDF Branding', $plan->pdf_branding ? 'Yes' : 'No', $plan->pdf_branding],
                 ['Custom SMTP', $plan->custom_smtp ? 'Yes' : 'No', $plan->custom_smtp],
                 ['Analytics', $plan->analytics ? 'Yes' : 'No', $plan->analytics],
