@@ -15,11 +15,6 @@
 @endsection
 
 @section('content')
-{{-- Offset modal centering to account for the fixed 16rem sidebar on desktop --}}
-<style>
-@media (min-width: 1024px) { .modal-overlay { padding-left: 16rem; } }
-</style>
-
 <div x-data="rolesApp()">
 
     {{-- Role cards grid --}}
@@ -99,10 +94,12 @@
         @endforelse
     </div>
 
-    {{-- ── Permission modal ─────────────────────────────────────────────── --}}
+    {{-- ── Permission modal — teleported to <body> so it sits above the topbar
+         and is independent of the scrollable <main> container ──────────── --}}
+    <template x-teleport="body">
     <div x-show="selected"
-         class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
-         style="background:rgba(0,0,0,0.65); display:none;"
+         class="fixed inset-0 z-[500] flex items-center justify-center p-4"
+         style="background: rgba(0,0,0,0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display:none;"
          x-transition:enter="transition ease-out duration-150"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
@@ -242,12 +239,14 @@
         </div>
     </div>
 
+    </template>{{-- end x-teleport --}}
 </div>{{-- end x-data --}}
 
-{{-- ── Create Role modal (plain JS, outside Alpine scope) ──────────────── --}}
+@push('modals')
+{{-- ── Create Role modal (plain JS, teleported to body via stack) ─────── --}}
 <div id="create-role-modal"
-     class="modal-overlay fixed inset-0 z-50 items-center justify-center p-4"
-     style="background:rgba(0,0,0,0.65); display:none;"
+     class="fixed inset-0 z-[500] items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display:none;"
      onclick="if(event.target===this) this.style.display='none'">
     <div class="app-modal w-full max-w-md rounded-2xl p-6"
          style="background: var(--modal-bg, rgba(255,255,255,0.97)); color: var(--modal-text, #1e293b); border: 1px solid var(--modal-border, rgba(0,0,0,0.09)); box-shadow: 0 25px 60px rgba(0,0,0,0.35);"
@@ -279,6 +278,7 @@
         </form>
     </div>
 </div>
+@endpush
 
 <script>
 function rolesApp() {
