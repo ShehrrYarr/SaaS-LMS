@@ -108,8 +108,8 @@
          x-transition:leave-end="opacity-0"
          @click.self="close()">
 
-        <div class="app-modal w-full max-w-2xl max-h-[88vh] flex flex-col rounded-2xl overflow-hidden"
-             style="background: var(--modal-bg, rgba(255,255,255,0.97)); color: var(--modal-text, #1e293b); border: 1px solid var(--modal-border, rgba(0,0,0,0.09)); box-shadow: 0 25px 60px rgba(0,0,0,0.35);"
+        <div class="app-modal w-full flex flex-col rounded-2xl overflow-hidden"
+             style="max-width: 42rem; max-height: calc(100vh - 2rem); background: var(--modal-bg, rgba(255,255,255,0.97)); color: var(--modal-text, #1e293b); border: 1px solid var(--modal-border, rgba(0,0,0,0.09)); box-shadow: 0 25px 60px rgba(0,0,0,0.35);"
              x-transition:enter="transition ease-out duration-150"
              x-transition:enter-start="opacity-0 scale-95"
              x-transition:enter-end="opacity-100 scale-100"
