@@ -74,7 +74,7 @@ class RoleController extends Controller
     {
         $tenantId = $this->context->id();
 
-        if ($role->team_id !== $tenantId) abort(403);
+        if ((int) $role->team_id !== $tenantId) abort(403);
         if ($role->name === 'Lab Admin') abort(403, 'The Lab Admin role cannot be modified.');
 
         setPermissionsTeamId($tenantId);
@@ -92,7 +92,7 @@ class RoleController extends Controller
     {
         $tenantId = $this->context->id();
 
-        if ($role->team_id !== $tenantId) abort(403);
+        if ((int) $role->team_id !== $tenantId) abort(403);
         if ($role->name === 'Lab Admin') return back()->with('error', 'The Lab Admin role cannot be deleted.');
 
         if ($role->users()->count() > 0) {
