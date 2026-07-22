@@ -113,7 +113,7 @@ class BillingController extends Controller
 
     public function deletePayment(string $lab_slug, Invoice $invoice, InvoicePayment $payment)
     {
-        if ($payment->invoice_id !== $invoice->id) {
+        if ((int) $payment->invoice_id !== $invoice->id) {
             abort(403);
         }
 
