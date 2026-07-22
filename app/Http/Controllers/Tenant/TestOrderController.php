@@ -125,6 +125,20 @@ class TestOrderController extends Controller
             SendReportReadyJob::dispatch($order, $tenant);
         }
 
+        if ($request->wantsJson()) {
+            $toastMap = [
+                'sample_collected' => 'Sample collected ✓',
+                'processing'       => 'Processing started',
+                'results_ready'    => 'Results ready — patient notified',
+                'finalized'        => 'Order finalized',
+            ];
+            return response()->json([
+                'success'    => true,
+                'new_status' => $newStatus,
+                'toast'      => $toastMap[$newStatus] ?? 'Status updated',
+            ]);
+        }
+
         return back()->with('success', "Order status updated to: " . str_replace('_', ' ', $newStatus));
     }
 
@@ -155,6 +169,14 @@ class TestOrderController extends Controller
         // Auto-advance to processing if all items have results
         if ($order->status === 'sample_collected' || $order->status === 'pending') {
             $order->update(['status' => 'processing']);
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success'      => true,
+                'item_status'  => $item->fresh()->status,
+                'order_status' => $order->fresh()->status,
+            ]);
         }
 
         return back()->with('success', 'Result saved.');

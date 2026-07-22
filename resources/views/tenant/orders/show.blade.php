@@ -6,9 +6,13 @@
 
 @section('topbar-actions')
 <div class="flex flex-wrap gap-2">
-    @if(in_array($order->status, ['results_ready', 'finalized']))
     @php $reportUrl = route('tenant.orders.report', [$currentTenant->slug, $order]); @endphp
-    <div x-data="{ open: false }" class="inline-block">
+
+    {{-- Download Report — visible once results_ready; reactive to AJAX status changes --}}
+    <div x-data="{ open: false }"
+         x-show="['results_ready','finalized'].includes($store.order.status)"
+         style="{{ in_array($order->status, ['results_ready', 'finalized']) ? '' : 'display:none;' }}"
+         class="inline-block">
         <button @click="open = true" type="button" class="btn-secondary text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -16,7 +20,6 @@
             Download Report
         </button>
 
-        {{-- Options popup (teleported to body so it escapes the header's backdrop-filter containing block) --}}
         <template x-teleport="body">
         <div x-show="open" x-cloak @keydown.escape.window="open = false"
              class="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -71,18 +74,50 @@
         </div>
         </template>
     </div>
-    @endif
+
+    {{-- Status advancement — AJAX, no page reload --}}
     @if(!in_array($order->status, ['finalized', 'cancelled']))
-    <form method="POST" action="{{ route('tenant.orders.status', [$currentTenant->slug, $order]) }}">
-        @csrf @method('PATCH')
-        @php
-        $nextLabels = ['pending' => 'Mark Sample Collected', 'sample_collected' => 'Mark Processing', 'processing' => 'Mark Results Ready', 'results_ready' => 'Finalize Order'];
-        $nextLabel  = $nextLabels[$order->status] ?? null;
-        @endphp
-        @if($nextLabel)
-        <button type="submit" class="btn-primary text-sm">{{ $nextLabel }}</button>
-        @endif
-    </form>
+    <div x-data="{
+        saving: false,
+        nextLabels: {
+            pending:          'Mark Sample Collected',
+            sample_collected: 'Mark Processing',
+            processing:       'Mark Results Ready',
+            results_ready:    'Finalize Order'
+        },
+        get nextLabel() { return this.nextLabels[$store.order.status] ?? null; },
+        async advance() {
+            if (this.saving) return;
+            this.saving = true;
+            const fd = new FormData();
+            fd.append('_token', '{{ csrf_token() }}');
+            fd.append('_method', 'PATCH');
+            try {
+                const r = await fetch('{{ route('tenant.orders.status', [$currentTenant->slug, $order]) }}', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                    body: fd
+                });
+                const json = await r.json();
+                if (json.success) {
+                    $store.order.status = json.new_status;
+                    showToast(json.toast ?? 'Status updated');
+                    if (json.new_status === 'finalized') setTimeout(() => location.reload(), 1800);
+                } else {
+                    showToast('Could not update status', 'error');
+                }
+            } catch(e) {
+                showToast('Connection error', 'error');
+            } finally {
+                this.saving = false;
+            }
+        }
+    }" x-show="nextLabel">
+        <button @click="advance()" :disabled="saving"
+                x-text="saving ? 'Updating…' : nextLabel"
+                class="btn-primary text-sm">
+        </button>
+    </div>
     @endif
 </div>
 @endsection
@@ -149,7 +184,6 @@
         <h4 class="text-white font-medium">Tests & Results</h4>
 
         @php
-            // Group items by the panel they came from (null panel = standalone tests)
             $groups = $order->items->groupBy(fn($i) => $i->panel_id ? ($i->panel_name . '#' . $i->panel_id) : '__standalone__');
             $locked = in_array($order->status, ['finalized', 'cancelled']);
         @endphp
@@ -158,7 +192,6 @@
         @php $first = $items->first(); $isPanel = $first->panel_id !== null; @endphp
 
         <div class="space-y-3">
-            {{-- Panel heading --}}
             @if($isPanel)
             <div class="flex items-center gap-2 pt-2">
                 <div class="w-7 h-7 rounded-lg bg-purple-500/15 flex items-center justify-center flex-shrink-0">
@@ -173,7 +206,6 @@
 
             @php $lastHeader = '__none__'; @endphp
             @foreach($items as $item)
-                {{-- Section sub-header within a panel --}}
                 @if($isPanel && $item->section_header && $item->section_header !== $lastHeader)
                 <p class="text-purple-300/80 text-xs uppercase tracking-wider pt-2 pl-1">{{ $item->section_header }}</p>
                 @endif
@@ -181,7 +213,44 @@
 
                 @php $isText = ($item->result_type ?? $item->testCatalog->result_type ?? 'numeric') === 'text'; @endphp
 
-                <div class="glass-card p-5 {{ $isPanel ? 'ml-1' : '' }}" x-data="{ open: {{ $item->result_value ? 'false' : 'true' }} }">
+                <div class="glass-card p-5 {{ $isPanel ? 'ml-1' : '' }}"
+                     x-data="{
+                         open: {{ $item->result_value ? 'false' : 'true' }},
+                         saving: false,
+                         saved: false,
+                         saveErr: false,
+                         async doSave() {
+                             if ($store.order.locked) return;
+                             this.saving = true;
+                             this.saved = false;
+                             this.saveErr = false;
+                             const form = this.$refs.resultForm;
+                             const fd = new FormData(form);
+                             try {
+                                 const r = await fetch(form.action, {
+                                     method: 'POST',
+                                     headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                                     body: fd
+                                 });
+                                 if (!r.ok) throw new Error('HTTP ' + r.status);
+                                 const json = await r.json();
+                                 if (json.success) {
+                                     this.saved = true;
+                                     if (json.order_status) $store.order.status = json.order_status;
+                                     showToast('Result saved');
+                                     setTimeout(() => this.saved = false, 3000);
+                                 } else {
+                                     this.saveErr = true;
+                                     showToast('Save failed', 'error');
+                                 }
+                             } catch(e) {
+                                 this.saveErr = true;
+                                 showToast('Connection error', 'error');
+                             } finally {
+                                 this.saving = false;
+                             }
+                         }
+                     }">
                     <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
                         <div class="flex items-center gap-3 min-w-0">
                             <div class="w-8 h-8 rounded-lg bg-indigo-500/15 flex items-center justify-center flex-shrink-0">
@@ -210,43 +279,61 @@
                     </div>
 
                     <div x-show="open" x-transition class="mt-4 border-t border-white/10 pt-4">
-                        @if(!$locked)
-                        <form method="POST" action="{{ route('tenant.orders.result', [$currentTenant->slug, $order, $item]) }}"
-                              enctype="multipart/form-data" class="space-y-3">
-                            @csrf @method('PATCH')
-                            @if($isText)
-                            <div>
-                                <label class="form-label text-xs">Result (free text)</label>
-                                <textarea name="result_value" class="glass-input text-sm" rows="3"
-                                          placeholder="e.g. Microcytic hypochromic, anisocytosis +">{{ $item->result_value }}</textarea>
-                            </div>
-                            @else
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                        {{-- Edit form — hidden when order is locked --}}
+                        <div x-show="!$store.order.locked" style="{{ $locked ? 'display:none;' : '' }}">
+                            <form x-ref="resultForm"
+                                  method="POST"
+                                  action="{{ route('tenant.orders.result', [$currentTenant->slug, $order, $item]) }}"
+                                  enctype="multipart/form-data"
+                                  class="space-y-3"
+                                  @submit.prevent>
+                                @csrf @method('PATCH')
+                                @if($isText)
                                 <div>
-                                    <label class="form-label text-xs">Result Value</label>
-                                    <input type="text" name="result_value" value="{{ $item->result_value }}" class="glass-input text-sm"
-                                           placeholder="{{ $item->testCatalog->unit ? 'e.g. 5.2 ' . $item->testCatalog->unit : 'Enter result...' }}">
+                                    <label class="form-label text-xs">Result (free text)</label>
+                                    <textarea name="result_value" class="glass-input text-sm" rows="3"
+                                              placeholder="e.g. Microcytic hypochromic, anisocytosis +"
+                                              @blur="doSave()">{{ $item->result_value }}</textarea>
                                 </div>
-                                <div>
-                                    <label class="form-label text-xs">Attach File (optional)</label>
-                                    <input type="file" name="result_file" class="glass-input text-xs py-2.5" accept=".pdf,.jpg,.jpeg,.png">
+                                @else
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="form-label text-xs">Result Value</label>
+                                        <input type="text" name="result_value" value="{{ $item->result_value }}" class="glass-input text-sm"
+                                               placeholder="{{ $item->testCatalog->unit ? 'e.g. 5.2 ' . $item->testCatalog->unit : 'Enter result...' }}"
+                                               @blur="doSave()">
+                                    </div>
+                                    <div>
+                                        <label class="form-label text-xs">Attach File (optional)</label>
+                                        <input type="file" name="result_file" class="glass-input text-xs py-2.5" accept=".pdf,.jpg,.jpeg,.png"
+                                               @change="doSave()">
+                                    </div>
                                 </div>
-                            </div>
-                            @endif
-                            <div>
-                                <label class="form-label text-xs">Remarks / Interpretation</label>
-                                <textarea name="remarks" class="glass-input text-sm" rows="2"
-                                          placeholder="Abnormal findings, notes…">{{ $item->remarks }}</textarea>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <button type="submit" class="btn-primary text-xs py-2 px-4">Save Result</button>
-                                @if($item->entered_by)
-                                <span class="text-white/30 text-xs">Last updated by {{ $item->enteredBy->name }} {{ $item->entered_at?->diffForHumans() }}</span>
                                 @endif
-                            </div>
-                        </form>
-                        @else
-                        <div class="space-y-2 text-sm">
+                                <div>
+                                    <label class="form-label text-xs">Remarks / Interpretation</label>
+                                    <textarea name="remarks" class="glass-input text-sm" rows="2"
+                                              placeholder="Abnormal findings, notes…"
+                                              @blur="doSave()">{{ $item->remarks }}</textarea>
+                                </div>
+                                {{-- Save status indicator (replaces the old Save button) --}}
+                                <div class="flex items-center gap-3 h-5">
+                                    <span x-show="saving" class="text-xs" style="color:#94a3b8;">Saving…</span>
+                                    <span x-show="saved && !saving" class="flex items-center gap-1.5 text-xs font-medium" style="color:#10b981;">
+                                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                        Saved
+                                    </span>
+                                    <span x-show="saveErr && !saving" class="text-xs" style="color:#ef4444;">Failed to save</span>
+                                    @if($item->entered_by)
+                                    <span x-show="!saving && !saved && !saveErr" class="text-white/30 text-xs">Last updated by {{ $item->enteredBy->name }} {{ $item->entered_at?->diffForHumans() }}</span>
+                                    @endif
+                                </div>
+                            </form>
+                        </div>
+
+                        {{-- Read-only view — shown when order is locked --}}
+                        <div x-show="$store.order.locked" style="{{ !$locked ? 'display:none;' : '' }}" class="space-y-2 text-sm">
                             <div class="flex gap-4">
                                 <span class="text-white/40">Result:</span>
                                 <span class="text-white">{{ $item->result_value ?? '—' }} {{ $isText ? '' : $item->testCatalog->unit }}</span>
@@ -261,7 +348,7 @@
                             <a href="{{ asset('storage/' . $item->result_file) }}" target="_blank" class="text-indigo-400 text-xs hover:underline">View Attached File</a>
                             @endif
                         </div>
-                        @endif
+
                     </div>
                 </div>
             @endforeach
@@ -270,3 +357,38 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.store('order', {
+        status: '{{ $order->status }}',
+        get locked() { return ['finalized', 'cancelled'].includes(this.status); }
+    });
+});
+
+function showToast(msg, type) {
+    type = type || 'success';
+    var container = document.getElementById('toast-container');
+    if (!container) return;
+    var wrap = document.createElement('div');
+    wrap.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,0.2);pointer-events:auto;min-width:180px;transition:opacity 0.3s;background:'
+        + (type === 'success' ? '#10b981' : '#ef4444')
+        + ';color:#fff;">'
+        + '<svg width="15" height="15" fill="currentColor" viewBox="0 0 20 20">'
+        + (type === 'success'
+            ? '<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>'
+            : '<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>')
+        + '</svg>' + msg + '</div>';
+    container.appendChild(wrap);
+    setTimeout(function() {
+        if (wrap.firstChild) wrap.firstChild.style.opacity = '0';
+        setTimeout(function() { wrap.remove(); }, 300);
+    }, 2500);
+}
+</script>
+@endpush
+
+@push('modals')
+<div id="toast-container" class="fixed bottom-5 right-5 z-[600] flex flex-col gap-2 pointer-events-none"></div>
+@endpush
