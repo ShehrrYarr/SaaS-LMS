@@ -98,7 +98,6 @@
         </div>
     </form>
 
-    @if($hasCustomTheme)
     <form method="POST" action="{{ route('tenant.settings.appearance.reset', $currentTenant->slug) }}"
           onsubmit="return confirm('Reset all panels to the default look?')">
         @csrf
@@ -107,7 +106,6 @@
             <button type="submit" class="btn-secondary text-sm flex-shrink-0">Reset to Default</button>
         </div>
     </form>
-    @endif
 </div>
 
 <script>

@@ -55,9 +55,7 @@ class SettingsController extends Controller
             self::THEME_DEFAULTS,
             json_decode($tenant->getSetting('theme') ?? '[]', true) ?: []
         );
-        $hasCustomTheme = (bool) $tenant->getSetting('theme');
-
-        return view('tenant.settings.appearance', compact('tenant', 'theme', 'hasCustomTheme'));
+        return view('tenant.settings.appearance', compact('tenant', 'theme'));
     }
 
     public function updateAppearance(Request $request, string $lab_slug)
