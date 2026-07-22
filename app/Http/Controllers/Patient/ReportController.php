@@ -12,7 +12,7 @@ class ReportController extends Controller
     {
         $patient = auth('patient')->user();
         $orders  = $patient->testOrders()
-                           ->with(['items.testCatalog'])
+                           ->with(['items.testCatalog', 'invoice'])
                            ->latest()
                            ->paginate(15);
 
@@ -23,12 +23,17 @@ class ReportController extends Controller
     {
         $patient = auth('patient')->user();
 
-        if ($order->patient_id !== $patient->id) {
+        if ((int) $order->patient_id !== $patient->id) {
             abort(403);
         }
 
         if (!in_array($order->status, ['results_ready', 'finalized'])) {
             return back()->with('error', 'This report is not ready yet.');
+        }
+
+        $order->loadMissing('invoice');
+        if ($order->invoice && $order->invoice->status !== 'paid') {
+            return back()->with('error', 'Please pay your invoice before downloading this report.');
         }
 
         $pdf      = PdfGenerator::report($order);

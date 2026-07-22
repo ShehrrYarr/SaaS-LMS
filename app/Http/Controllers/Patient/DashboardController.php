@@ -12,7 +12,7 @@ class DashboardController extends Controller
 
         $patient->load([
             'appointments' => fn($q) => $q->latest()->limit(3),
-            'testOrders'   => fn($q) => $q->latest()->limit(5)->with(['items.testCatalog']),
+            'testOrders'   => fn($q) => $q->latest()->limit(5)->with(['items.testCatalog', 'invoice']),
             'invoices'     => fn($q) => $q->latest()->limit(3),
         ]);
 
