@@ -10,23 +10,48 @@
         \App\Http\Controllers\Tenant\SettingsController::THEME_DEFAULTS,
         json_decode($themeJson, true) ?: []
     );
+
     $paint = fn (string $area) => $t[$area . '_type'] === 'gradient'
         ? "linear-gradient({$t[$area.'_direction']}, {$t[$area.'_color1']}, {$t[$area.'_color2']})"
         : $t[$area . '_color1'];
+
+    // Convert hex to rgba for glass tint
+    $rgba = fn (string $hex, float $a = 0.18) => sprintf(
+        'rgba(%d,%d,%d,%.2f)',
+        hexdec(substr($hex, 1, 2)),
+        hexdec(substr($hex, 3, 2)),
+        hexdec(substr($hex, 5, 2)),
+        $a
+    );
+    $paintGlass = fn (string $area) => $t[$area.'_type'] === 'gradient'
+        ? "linear-gradient({$t[$area.'_direction']}, {$rgba($t[$area.'_color1'])}, {$rgba($t[$area.'_color2'])})"
+        : $rgba($t[$area.'_color1']);
 @endphp
 <style>
     /* Page background */
     body.bg-page { background: {{ $paint('bg') }} !important; }
 
     /* Sidebar */
-    .app-sidebar { background: {{ $paint('sidebar') }} !important; }
+    .app-sidebar {
+        background: {{ !empty($t['sidebar_glass']) ? $paintGlass('sidebar') : $paint('sidebar') }} !important;
+        @if(!empty($t['sidebar_glass']))
+        backdrop-filter: blur(12px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+        @endif
+    }
     .app-sidebar,
     .app-sidebar .nav-link,
     .app-sidebar [style*="color:"] { color: {{ $t['sidebar_text'] }} !important; }
     .app-sidebar .nav-link.active { color: {{ $t['sidebar_text'] }} !important; }
 
     /* Top bar */
-    .app-topbar { background: {{ $paint('topbar') }} !important; }
+    .app-topbar {
+        background: {{ !empty($t['topbar_glass']) ? $paintGlass('topbar') : $paint('topbar') }} !important;
+        @if(!empty($t['topbar_glass']))
+        backdrop-filter: blur(12px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+        @endif
+    }
     .app-topbar,
     .app-topbar .page-title,
     .app-topbar .page-subtitle,

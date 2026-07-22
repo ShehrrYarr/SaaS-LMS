@@ -34,10 +34,12 @@ class SettingsController extends Controller
         'sidebar_color1'    => '#ffffff',
         'sidebar_color2'    => '#eef2ff',
         'sidebar_direction' => 'to bottom',
+        'sidebar_glass'     => false,
         'topbar_type'       => 'solid',
         'topbar_color1'     => '#ffffff',
         'topbar_color2'     => '#eef2ff',
         'topbar_direction'  => 'to right',
+        'topbar_glass'      => false,
         'bg_type'           => 'solid',
         'bg_color1'         => '#eef1f7',
         'bg_color2'         => '#e0e7ff',
@@ -80,6 +82,9 @@ class SettingsController extends Controller
             'heading_text'      => $hex,
             'body_text'         => $hex,
         ]);
+
+        $data['sidebar_glass'] = $request->boolean('sidebar_glass');
+        $data['topbar_glass']  = $request->boolean('topbar_glass');
 
         $this->context->get()->setSetting('theme', json_encode($data));
 
