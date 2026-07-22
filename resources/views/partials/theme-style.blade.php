@@ -26,6 +26,16 @@
     $paintGlass = fn (string $area) => $t[$area.'_type'] === 'gradient'
         ? "linear-gradient({$t[$area.'_direction']}, {$rgba($t[$area.'_color1'])}, {$rgba($t[$area.'_color2'])})"
         : $rgba($t[$area.'_color1']);
+
+    // Modal color derivation — dark vs light sidebar determines surface/divider direction
+    $sHex = ltrim($t['sidebar_color1'], '#');
+    $sLum = 0.299 * (hexdec(substr($sHex,0,2))/255)
+          + 0.587 * (hexdec(substr($sHex,2,2))/255)
+          + 0.114 * (hexdec(substr($sHex,4,2))/255);
+    $isDarkSidebar = $sLum < 0.5;
+    $modalSurface  = $isDarkSidebar ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
+    $modalDivider  = $isDarkSidebar ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.07)';
+    $modalBorder   = $isDarkSidebar ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.09)';
 @endphp
 <style>
     /* Page background */
@@ -56,6 +66,21 @@
     .app-topbar .page-title,
     .app-topbar .page-subtitle,
     .app-topbar [style*="color:"] { color: {{ $t['topbar_text'] }} !important; }
+
+    /* Modal CSS variables — consumed by roles popup (and any future modal) */
+    :root {
+        --modal-bg:      {{ !empty($t['sidebar_glass']) ? $paintGlass('sidebar') : $paint('sidebar') }};
+        --modal-text:    {{ $t['sidebar_text'] }};
+        --modal-surface: {{ $modalSurface }};
+        --modal-divider: {{ $modalDivider }};
+        --modal-border:  {{ $modalBorder }};
+    }
+    @if(!empty($t['sidebar_glass']))
+    .app-modal {
+        backdrop-filter: blur(16px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+    }
+    @endif
 
     /* Content text — headings */
     main h1:not([style*="color"]), main h2:not([style*="color"]), main h3:not([style*="color"]),

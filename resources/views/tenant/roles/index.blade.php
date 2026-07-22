@@ -15,6 +15,11 @@
 @endsection
 
 @section('content')
+{{-- Offset modal centering to account for the fixed 16rem sidebar on desktop --}}
+<style>
+@media (min-width: 1024px) { .modal-overlay { padding-left: 16rem; } }
+</style>
+
 <div x-data="rolesApp()">
 
     {{-- Role cards grid --}}
@@ -96,7 +101,7 @@
 
     {{-- ── Permission modal ─────────────────────────────────────────────── --}}
     <div x-show="selected"
-         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
          style="background:rgba(0,0,0,0.65); display:none;"
          x-transition:enter="transition ease-out duration-150"
          x-transition:enter-start="opacity-0"
@@ -106,8 +111,8 @@
          x-transition:leave-end="opacity-0"
          @click.self="close()">
 
-        <div class="w-full max-w-2xl max-h-[88vh] flex flex-col rounded-2xl overflow-hidden"
-             style="background:#1a2236; border:1px solid rgba(255,255,255,0.1); box-shadow:0 25px 60px rgba(0,0,0,0.5);"
+        <div class="app-modal w-full max-w-2xl max-h-[88vh] flex flex-col rounded-2xl overflow-hidden"
+             style="background: var(--modal-bg, rgba(255,255,255,0.97)); color: var(--modal-text, #1e293b); border: 1px solid var(--modal-border, rgba(0,0,0,0.09)); box-shadow: 0 25px 60px rgba(0,0,0,0.35);"
              x-transition:enter="transition ease-out duration-150"
              x-transition:enter-start="opacity-0 scale-95"
              x-transition:enter-end="opacity-100 scale-100"
@@ -115,10 +120,10 @@
 
             {{-- Modal header --}}
             <div class="flex items-start justify-between gap-4 p-6 flex-shrink-0"
-                 style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                 style="border-bottom: 1px solid var(--modal-divider, rgba(0,0,0,0.07));">
                 <div>
                     <div class="flex items-center gap-2 flex-wrap">
-                        <h3 class="text-white font-bold text-lg" x-text="selected?.name"></h3>
+                        <h3 class="font-bold text-lg" x-text="selected?.name"></h3>
                         <span x-show="selected?.is_system" class="badge badge-purple flex items-center gap-1 text-xs">
                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
@@ -126,14 +131,15 @@
                             System — read only
                         </span>
                     </div>
-                    <p class="text-white/40 text-sm mt-0.5"
+                    <p class="text-sm mt-0.5" style="opacity: 0.55;"
                        x-text="selected?.is_system
                            ? 'This role always has every permission and cannot be changed.'
                            : selected?.perms.length + ' permission' + (selected?.perms.length === 1 ? '' : 's') + ' assigned'">
                     </p>
                 </div>
                 <button type="button" @click="close()"
-                        class="text-white/30 hover:text-white transition-colors flex-shrink-0 mt-0.5">
+                        class="transition-colors flex-shrink-0 mt-0.5" style="opacity: 0.4; color: inherit;"
+                        onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.4'">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -146,8 +152,8 @@
                 {{-- ── System role (Lab Admin) — read-only view ── --}}
                 <div x-show="selected?.is_system">
                     @foreach($permGroups as $group => $perms)
-                    <div class="rounded-xl p-4 mb-3" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);">
-                        <p class="text-white/60 text-xs font-semibold uppercase tracking-wider mb-3">{{ $group }}</p>
+                    <div class="rounded-xl p-4 mb-3" style="background: var(--modal-surface, rgba(0,0,0,0.04)); border: 1px solid var(--modal-divider, rgba(0,0,0,0.07));">
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-3" style="opacity: 0.55;">{{ $group }}</p>
                         <div class="grid grid-cols-2 gap-2">
                             @foreach($perms as $perm)
                             <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
@@ -171,17 +177,17 @@
 
                         <div class="space-y-3">
                             @foreach($permGroups as $group => $perms)
-                            <div class="rounded-xl p-4" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);">
+                            <div class="rounded-xl p-4" style="background: var(--modal-surface, rgba(0,0,0,0.04)); border: 1px solid var(--modal-divider, rgba(0,0,0,0.07));">
                                 <div class="flex items-center gap-3 mb-3">
-                                    <span class="text-white/60 text-xs font-semibold uppercase tracking-wider">{{ $group }}</span>
-                                    <div class="flex-1 h-px" style="background:rgba(255,255,255,0.07)"></div>
+                                    <span class="text-xs font-semibold uppercase tracking-wider" style="opacity: 0.55;">{{ $group }}</span>
+                                    <div class="flex-1 h-px" style="background: var(--modal-divider, rgba(0,0,0,0.07));"></div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     @foreach($perms as $perm)
                                     <label class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-all select-none"
                                            :style="selected?.perms.includes('{{ $perm }}')
                                                ? 'background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3);'
-                                               : 'background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07);'">
+                                               : 'background: var(--modal-surface, rgba(0,0,0,0.04)); border: 1px solid var(--modal-divider, rgba(0,0,0,0.07));'">
                                         <input type="checkbox"
                                                name="permissions[]"
                                                value="{{ $perm }}"
@@ -189,7 +195,7 @@
                                                @change="togglePerm('{{ $perm }}')"
                                                style="accent-color:#6366f1; cursor:pointer; width:14px; height:14px; flex-shrink:0;">
                                         <span class="text-xs leading-tight"
-                                              :style="selected?.perms.includes('{{ $perm }}') ? 'color:#c7d2fe;' : 'color:#64748b;'">
+                                              :style="selected?.perms.includes('{{ $perm }}') ? 'color:#c7d2fe;' : 'opacity: 0.6;'">
                                             {{ str_replace('-', ' ', Str::title($perm)) }}
                                         </span>
                                     </label>
@@ -204,14 +210,14 @@
 
             {{-- Modal footer --}}
             <div class="flex items-center justify-between gap-3 p-5 flex-shrink-0"
-                 style="border-top:1px solid rgba(255,255,255,0.08);">
+                 style="border-top: 1px solid var(--modal-divider, rgba(0,0,0,0.07));">
 
                 {{-- Left: Save (custom only) --}}
                 <div x-show="!selected?.is_system">
                     <button type="submit" form="perm-form" class="btn-primary text-sm">Save Permissions</button>
                 </div>
                 <div x-show="selected?.is_system">
-                    <span class="text-white/30 text-sm">Read-only — system role</span>
+                    <span class="text-sm" style="opacity: 0.35;">Read-only — system role</span>
                 </div>
 
                 {{-- Right: Cancel + Delete --}}
@@ -240,17 +246,18 @@
 
 {{-- ── Create Role modal (plain JS, outside Alpine scope) ──────────────── --}}
 <div id="create-role-modal"
-     class="fixed inset-0 z-50 items-center justify-center p-4"
+     class="modal-overlay fixed inset-0 z-50 items-center justify-center p-4"
      style="background:rgba(0,0,0,0.65); display:none;"
      onclick="if(event.target===this) this.style.display='none'">
-    <div class="w-full max-w-md rounded-2xl p-6"
-         style="background:#1a2236; border:1px solid rgba(255,255,255,0.1); box-shadow:0 25px 60px rgba(0,0,0,0.5);"
+    <div class="app-modal w-full max-w-md rounded-2xl p-6"
+         style="background: var(--modal-bg, rgba(255,255,255,0.97)); color: var(--modal-text, #1e293b); border: 1px solid var(--modal-border, rgba(0,0,0,0.09)); box-shadow: 0 25px 60px rgba(0,0,0,0.35);"
          onclick="event.stopPropagation()">
         <div class="flex items-center justify-between mb-5">
-            <h3 class="text-white font-bold text-lg">Create New Role</h3>
+            <h3 class="font-bold text-lg">Create New Role</h3>
             <button type="button"
                     onclick="document.getElementById('create-role-modal').style.display='none'"
-                    class="text-white/30 hover:text-white transition-colors">
+                    class="transition-colors" style="opacity: 0.4; color: inherit;"
+                    onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.4'">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -261,7 +268,7 @@
             <div>
                 <label class="form-label">Role Name <span class="text-red-400">*</span></label>
                 <input type="text" name="name" class="glass-input" placeholder="e.g. Receptionist, Lab Technician" required autofocus>
-                <p class="text-white/25 text-xs mt-1">You can assign permissions after creating the role.</p>
+                <p class="text-xs mt-1" style="opacity: 0.4;">You can assign permissions after creating the role.</p>
             </div>
             <div class="flex gap-3 pt-1">
                 <button type="submit" class="btn-primary flex-1 text-sm">Create Role</button>
