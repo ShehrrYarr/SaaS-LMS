@@ -26,11 +26,30 @@ class RoleController extends Controller
 
     public function index(string $lab_slug)
     {
-        $tenantId   = $this->context->id();
-        $roles      = Role::where('team_id', $tenantId)->with('permissions')->get();
-        $allPerms   = collect(array_merge(...array_values(self::PERMISSION_GROUPS)));
+        $tenantId = $this->context->id();
+        setPermissionsTeamId($tenantId);
 
-        return view('tenant.roles.index', compact('roles', 'allPerms'));
+        // Auto-create the Lab Admin system role with every permission
+        $allPermNames = array_merge(...array_values(self::PERMISSION_GROUPS));
+        $this->ensurePermissionsExist($allPermNames);
+
+        $labAdmin = Role::firstOrCreate(
+            ['name' => 'Lab Admin', 'guard_name' => 'web', 'team_id' => $tenantId]
+        );
+        $labAdmin->syncPermissions($allPermNames);
+
+        $roles = Role::where('team_id', $tenantId)
+                     ->with('permissions')
+                     ->orderByRaw("CASE WHEN name = 'Lab Admin' THEN 0 ELSE 1 END")
+                     ->orderBy('name')
+                     ->get();
+
+        // Precompute user counts to avoid N+1 in the view
+        $userCounts = $roles->mapWithKeys(fn ($r) => [$r->id => $r->users()->count()]);
+
+        $permGroups = self::PERMISSION_GROUPS;
+
+        return view('tenant.roles.index', compact('roles', 'permGroups', 'userCounts'));
     }
 
     public function store(Request $request, string $lab_slug)
@@ -55,9 +74,8 @@ class RoleController extends Controller
     {
         $tenantId = $this->context->id();
 
-        if ($role->team_id !== $tenantId) {
-            abort(403);
-        }
+        if ($role->team_id !== $tenantId) abort(403);
+        if ($role->name === 'Lab Admin') abort(403, 'The Lab Admin role cannot be modified.');
 
         setPermissionsTeamId($tenantId);
 
@@ -74,9 +92,8 @@ class RoleController extends Controller
     {
         $tenantId = $this->context->id();
 
-        if ($role->team_id !== $tenantId) {
-            abort(403);
-        }
+        if ($role->team_id !== $tenantId) abort(403);
+        if ($role->name === 'Lab Admin') return back()->with('error', 'The Lab Admin role cannot be deleted.');
 
         if ($role->users()->count() > 0) {
             return back()->with('error', 'Cannot delete a role that is assigned to staff. Unassign it first.');

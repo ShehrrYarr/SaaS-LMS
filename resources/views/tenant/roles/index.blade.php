@@ -2,120 +2,307 @@
 
 @section('title', 'Roles & Permissions')
 @section('page-title', 'Roles & Permissions')
-@section('page-subtitle', 'Create custom roles and toggle granular permissions')
+@section('page-subtitle', 'Manage roles and control what each one can do')
+
+@section('topbar-actions')
+<button type="button" onclick="document.getElementById('create-role-modal').style.display='flex'"
+        class="btn-primary text-sm">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    New Role
+</button>
+@endsection
 
 @section('content')
-<div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+<div x-data="rolesApp()">
 
-    {{-- Create Role Panel --}}
-    <div class="xl:col-span-1">
-        <div class="glass-card p-6 sticky top-6">
-            <h3 class="text-white font-semibold mb-4">Create Role</h3>
-            <form method="POST" action="{{ route('tenant.roles.store', $currentTenant->slug) }}" class="space-y-4">
-                @csrf
-                <div>
-                    <label class="form-label">Role Name</label>
-                    <input type="text" name="name" class="glass-input" placeholder="e.g. Receptionist" required>
+    {{-- Role cards grid --}}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        @forelse($roles as $role)
+        @php
+            $isSystem   = $role->name === 'Lab Admin';
+            $permCount  = $role->permissions->count();
+            $userCount  = $userCounts[$role->id] ?? 0;
+            $roleData   = Js::from([
+                'id'         => $role->id,
+                'name'       => $role->name,
+                'is_system'  => $isSystem,
+                'perms'      => $role->permissions->pluck('name')->values()->toArray(),
+                'user_count' => $userCount,
+                'update_url' => route('tenant.roles.update',  [$currentTenant->slug, $role]),
+                'delete_url' => route('tenant.roles.destroy', [$currentTenant->slug, $role]),
+            ]);
+        @endphp
+        <button type="button"
+                @click="open({{ $roleData }})"
+                class="glass-card-hover p-6 text-left w-full transition-all">
+            <div class="flex items-start justify-between gap-3 mb-4">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                     style="{{ $isSystem ? 'background:rgba(99,102,241,0.15)' : 'background:rgba(255,255,255,0.07)' }}">
+                    @if($isSystem)
+                    <svg class="w-5 h-5" style="color:#6366f1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    @else
+                    <svg class="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    @endif
                 </div>
-                <button type="submit" class="btn-primary w-full text-sm">Create Role</button>
-            </form>
+                @if($isSystem)
+                <span class="badge badge-purple flex items-center gap-1 flex-shrink-0">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+                    </svg>
+                    System
+                </span>
+                @else
+                <span class="badge badge-gray">Custom</span>
+                @endif
+            </div>
 
-            @if($roles->isNotEmpty())
-            <div class="mt-6 pt-4 border-t border-white/10">
-                <h4 class="text-white/50 text-xs uppercase tracking-wider mb-3">Existing Roles</h4>
-                <div class="space-y-2">
-                    @foreach($roles as $role)
-                    <div class="flex items-center justify-between p-2.5 rounded-lg bg-white/5">
-                        <span class="text-white/70 text-sm">{{ $role->name }}</span>
-                        <div class="flex items-center gap-1">
-                            <span class="text-white/30 text-xs">{{ $role->permissions->count() }} perms</span>
-                            @if($role->users()->count() === 0)
-                            <form method="POST" action="{{ route('tenant.roles.destroy', [$currentTenant->slug, $role]) }}"
-                                  onsubmit="return confirm('Delete this role?')">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="text-red-400/50 hover:text-red-400 ml-2 transition-colors">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                </button>
-                            </form>
-                            @endif
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
+            <h3 class="text-white font-bold text-base mb-1">{{ $role->name }}</h3>
+            <p class="text-white/40 text-sm">
+                {{ $isSystem ? 'All permissions' : $permCount . ' permission' . ($permCount === 1 ? '' : 's') }}
+                @if($userCount > 0)
+                 · {{ $userCount }} {{ Str::plural('staff', $userCount) }}
+                @endif
+            </p>
+
+            {{-- Permission group dots --}}
+            @if(!$isSystem)
+            <div class="flex flex-wrap gap-1.5 mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.06);">
+                @foreach($permGroups as $group => $perms)
+                @php $hasAny = $role->permissions->whereIn('name', $perms)->isNotEmpty(); @endphp
+                <span class="text-xs px-2 py-0.5 rounded-full"
+                      style="{{ $hasAny ? 'background:rgba(99,102,241,0.15); color:#a5b4fc;' : 'background:rgba(255,255,255,0.04); color:#475569;' }}">
+                    {{ $group }}
+                </span>
+                @endforeach
+            </div>
+            @else
+            <div class="flex items-center gap-1.5 mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.06);">
+                <span class="text-xs" style="color:#6ee7b7;">All {{ count(array_merge(...array_values($permGroups))) }} permissions granted</span>
             </div>
             @endif
+        </button>
+        @empty
+        <div class="col-span-3 glass-card p-12 text-center">
+            <p class="text-white/30">No roles yet. Click <strong class="text-white/50">New Role</strong> to create one.</p>
         </div>
+        @endforelse
     </div>
 
-    {{-- Permission Matrix --}}
-    <div class="xl:col-span-3">
-        @forelse($roles as $role)
-        <div class="glass-card p-6 mb-5">
-            <div class="flex items-center justify-between mb-6">
+    {{-- ── Permission modal ─────────────────────────────────────────────── --}}
+    <div x-show="selected"
+         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         style="background:rgba(0,0,0,0.65); display:none;"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-100"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click.self="close()">
+
+        <div class="w-full max-w-2xl max-h-[88vh] flex flex-col rounded-2xl overflow-hidden"
+             style="background:#1a2236; border:1px solid rgba(255,255,255,0.1); box-shadow:0 25px 60px rgba(0,0,0,0.5);"
+             x-transition:enter="transition ease-out duration-150"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             @click.stop>
+
+            {{-- Modal header --}}
+            <div class="flex items-start justify-between gap-4 p-6 flex-shrink-0"
+                 style="border-bottom:1px solid rgba(255,255,255,0.08);">
                 <div>
-                    <h3 class="text-white font-bold text-lg">{{ $role->name }}</h3>
-                    <p class="text-white/40 text-sm">{{ $role->permissions->count() }} permissions assigned</p>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h3 class="text-white font-bold text-lg" x-text="selected?.name"></h3>
+                        <span x-show="selected?.is_system" class="badge badge-purple flex items-center gap-1 text-xs">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+                            </svg>
+                            System — read only
+                        </span>
+                    </div>
+                    <p class="text-white/40 text-sm mt-0.5"
+                       x-text="selected?.is_system
+                           ? 'This role always has every permission and cannot be changed.'
+                           : selected?.perms.length + ' permission' + (selected?.perms.length === 1 ? '' : 's') + ' assigned'">
+                    </p>
                 </div>
-                <span class="badge badge-purple">Role</span>
+                <button type="button" @click="close()"
+                        class="text-white/30 hover:text-white transition-colors flex-shrink-0 mt-0.5">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
             </div>
 
-            <form method="POST" action="{{ route('tenant.roles.update', [$currentTenant->slug, $role]) }}">
-                @csrf @method('PUT')
+            {{-- Modal body (scrollable) --}}
+            <div class="overflow-y-auto flex-1 p-6 space-y-4">
 
-                @php
-                $rolePerms = $role->permissions->pluck('name')->toArray();
-                $permGroups = \App\Http\Controllers\Tenant\RoleController::PERMISSION_GROUPS;
-                @endphp
-
-                <div class="space-y-5">
+                {{-- ── System role (Lab Admin) — read-only view ── --}}
+                <div x-show="selected?.is_system">
                     @foreach($permGroups as $group => $perms)
-                    <div class="p-4 rounded-xl" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);">
-                        <div class="flex items-center gap-3 mb-3">
-                            <span class="text-white/70 text-sm font-semibold">{{ $group }}</span>
-                            <div class="flex-1 h-px bg-white/8"></div>
-                        </div>
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                    <div class="rounded-xl p-4 mb-3" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);">
+                        <p class="text-white/60 text-xs font-semibold uppercase tracking-wider mb-3">{{ $group }}</p>
+                        <div class="grid grid-cols-2 gap-2">
                             @foreach($perms as $perm)
-                            <label class="flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer transition-all hover:bg-white/5"
-                                   :class="perms_{{ $role->id }}['{{ $perm }}'] ? 'border border-indigo-500/30 bg-indigo-500/10' : 'border border-white/8'"
-                                   x-data
-                                   x-bind:class="$store.perms_{{ $role->id }} && $store.perms_{{ $role->id }}['{{ $perm }}'] ? 'border border-indigo-500/30 bg-indigo-500/10' : 'border border-white/8'">
-                                <input type="checkbox" name="permissions[]" value="{{ $perm }}"
-                                       @checked(in_array($perm, $rolePerms))
-                                       class="rounded border-white/20 bg-white/5 text-indigo-500 cursor-pointer"
-                                       x-data
-                                       @change="
-                                           if (!Alpine.store('perms_{{ $role->id }}')) Alpine.store('perms_{{ $role->id }}', {});
-                                           Alpine.store('perms_{{ $role->id }}')['{{ $perm }}'] = $event.target.checked;
-                                       "
-                                       x-init="
-                                           if (!Alpine.store('perms_{{ $role->id }}')) Alpine.store('perms_{{ $role->id }}', {});
-                                           Alpine.store('perms_{{ $role->id }}')['{{ $perm }}'] = {{ in_array($perm, $rolePerms) ? 'true' : 'false' }};
-                                       ">
-                                <span class="text-xs text-white/60 leading-tight">{{ str_replace('-', ' ', Str::title($perm)) }}</span>
-                            </label>
+                            <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
+                                 style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2)">
+                                <svg class="w-3.5 h-3.5 flex-shrink-0" style="color:#34d399" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="text-xs" style="color:#6ee7b7;">{{ str_replace('-', ' ', Str::title($perm)) }}</span>
+                            </div>
                             @endforeach
                         </div>
                     </div>
                     @endforeach
                 </div>
 
-                <div class="flex items-center gap-4 mt-5 pt-4 border-t border-white/10">
-                    <button type="submit" class="btn-primary text-sm">Save Permissions</button>
-                    <p class="text-white/30 text-xs">Changes take effect immediately.</p>
+                {{-- ── Custom role — editable form ── --}}
+                <div x-show="!selected?.is_system">
+                    <form :action="selected?.update_url" method="POST" id="perm-form">
+                        @csrf
+                        <input type="hidden" name="_method" value="PUT">
+
+                        <div class="space-y-3">
+                            @foreach($permGroups as $group => $perms)
+                            <div class="rounded-xl p-4" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span class="text-white/60 text-xs font-semibold uppercase tracking-wider">{{ $group }}</span>
+                                    <div class="flex-1 h-px" style="background:rgba(255,255,255,0.07)"></div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    @foreach($perms as $perm)
+                                    <label class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-all select-none"
+                                           :style="selected?.perms.includes('{{ $perm }}')
+                                               ? 'background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3);'
+                                               : 'background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07);'">
+                                        <input type="checkbox"
+                                               name="permissions[]"
+                                               value="{{ $perm }}"
+                                               :checked="selected?.perms.includes('{{ $perm }}')"
+                                               @change="togglePerm('{{ $perm }}')"
+                                               style="accent-color:#6366f1; cursor:pointer; width:14px; height:14px; flex-shrink:0;">
+                                        <span class="text-xs leading-tight"
+                                              :style="selected?.perms.includes('{{ $perm }}') ? 'color:#c7d2fe;' : 'color:#64748b;'">
+                                            {{ str_replace('-', ' ', Str::title($perm)) }}
+                                        </span>
+                                    </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
+
+            {{-- Modal footer --}}
+            <div class="flex items-center justify-between gap-3 p-5 flex-shrink-0"
+                 style="border-top:1px solid rgba(255,255,255,0.08);">
+
+                {{-- Left: Save (custom only) --}}
+                <div x-show="!selected?.is_system">
+                    <button type="submit" form="perm-form" class="btn-primary text-sm">Save Permissions</button>
+                </div>
+                <div x-show="selected?.is_system">
+                    <span class="text-white/30 text-sm">Read-only — system role</span>
+                </div>
+
+                {{-- Right: Cancel + Delete --}}
+                <div class="flex items-center gap-2">
+                    <button type="button" @click="close()" class="btn-secondary text-sm">Close</button>
+                    <form x-show="!selected?.is_system && selected?.user_count === 0"
+                          :action="selected?.delete_url" method="POST"
+                          @submit.prevent="confirmDelete($event)">
+                        @csrf
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit"
+                                class="text-sm px-3 py-1.5 rounded-lg transition-colors"
+                                style="color:#f87171; border:1px solid rgba(248,113,113,0.3);"
+                                onmouseover="this.style.background='rgba(248,113,113,0.1)'"
+                                onmouseout="this.style.background=''">
+                            Delete Role
+                        </button>
+                    </form>
+                </div>
+            </div>
+
         </div>
-        @empty
-        <div class="glass-card p-12 text-center">
-            <svg class="w-12 h-12 text-white/20 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-            </svg>
-            <p class="text-white/30 text-sm">No roles yet. Create your first role on the left.</p>
+    </div>
+
+</div>{{-- end x-data --}}
+
+{{-- ── Create Role modal (plain JS, outside Alpine scope) ──────────────── --}}
+<div id="create-role-modal"
+     class="fixed inset-0 z-50 items-center justify-center p-4"
+     style="background:rgba(0,0,0,0.65); display:none;"
+     onclick="if(event.target===this) this.style.display='none'">
+    <div class="w-full max-w-md rounded-2xl p-6"
+         style="background:#1a2236; border:1px solid rgba(255,255,255,0.1); box-shadow:0 25px 60px rgba(0,0,0,0.5);"
+         onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-5">
+            <h3 class="text-white font-bold text-lg">Create New Role</h3>
+            <button type="button"
+                    onclick="document.getElementById('create-role-modal').style.display='none'"
+                    class="text-white/30 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
         </div>
-        @endforelse
+        <form method="POST" action="{{ route('tenant.roles.store', $currentTenant->slug) }}" class="space-y-4">
+            @csrf
+            <div>
+                <label class="form-label">Role Name <span class="text-red-400">*</span></label>
+                <input type="text" name="name" class="glass-input" placeholder="e.g. Receptionist, Lab Technician" required autofocus>
+                <p class="text-white/25 text-xs mt-1">You can assign permissions after creating the role.</p>
+            </div>
+            <div class="flex gap-3 pt-1">
+                <button type="submit" class="btn-primary flex-1 text-sm">Create Role</button>
+                <button type="button"
+                        onclick="document.getElementById('create-role-modal').style.display='none'"
+                        class="btn-secondary text-sm">Cancel</button>
+            </div>
+        </form>
     </div>
 </div>
+
+<script>
+function rolesApp() {
+    return {
+        selected: null,
+
+        open(role) {
+            // Deep-copy so user can toggle perms without mutating the card data
+            this.selected = { ...role, perms: [...role.perms] };
+        },
+
+        close() {
+            this.selected = null;
+        },
+
+        togglePerm(perm) {
+            if (!this.selected) return;
+            const idx = this.selected.perms.indexOf(perm);
+            if (idx >= 0) {
+                this.selected.perms.splice(idx, 1);
+            } else {
+                this.selected.perms.push(perm);
+            }
+        },
+
+        confirmDelete(event) {
+            if (confirm('Delete the role "' + this.selected?.name + '"? This cannot be undone.')) {
+                event.target.submit();
+            }
+        },
+    };
+}
+</script>
 @endsection
