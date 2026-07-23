@@ -17,7 +17,7 @@
                 <label class="form-label">Discount</label>
                 <input type="number" name="discount" value="{{ old('discount', $invoice->discount) }}"
                        class="glass-input" min="0" step="0.01" max="{{ $invoice->subtotal }}">
-                <p class="text-white/30 text-xs mt-1">Subtotal: {{ number_format($invoice->subtotal, 2) }}</p>
+                <p class="text-white/30 text-xs mt-1">Subtotal: {{ money($invoice->subtotal) }}</p>
                 @error('discount')<p class="form-error">{{ $message }}</p>@enderror
             </div>
             <div>

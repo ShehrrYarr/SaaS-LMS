@@ -56,7 +56,7 @@ function testForm(config) {
             const t = this.availableTests.find(t => t.id === id);
             if (!t) return '';
             if (t.result_type === 'text') return 'text';
-            return [t.unit, parseFloat(t.price).toFixed(2)].filter(Boolean).join(' · ');
+            return [t.unit, 'PKR ' + Math.round(parseFloat(t.price)).toLocaleString()].filter(Boolean).join(' · ');
         },
         panelName(id) { const p = this.availablePanels.find(p => p.id === id); return p ? p.name : '(unavailable panel)'; },
         panelMeta(id) {

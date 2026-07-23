@@ -146,7 +146,7 @@
                         <p class="text-white/40 text-xs">{{ $inv->created_at->format('d M Y') }}</p>
                     </div>
                     <div class="text-right">
-                        <p class="text-white font-medium text-sm">{{ number_format($inv->total, 2) }}</p>
+                        <p class="text-white font-medium text-sm">{{ money($inv->total) }}</p>
                         <span class="badge badge-{{ $inv->status === 'paid' ? 'success' : 'warning' }} text-xs">{{ ucfirst($inv->status) }}</span>
                     </div>
                 </div>

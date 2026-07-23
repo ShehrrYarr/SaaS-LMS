@@ -149,8 +149,8 @@
             <tr>
                 <td>{{ $item->description }}</td>
                 <td style="text-align:center;">{{ $item->quantity }}</td>
-                <td style="text-align:right;">{{ number_format($item->unit_price, 2) }}</td>
-                <td style="text-align:right;font-weight:700;">{{ number_format($item->total, 2) }}</td>
+                <td style="text-align:right;">{{ money($item->unit_price) }}</td>
+                <td style="text-align:right;font-weight:700;">{{ money($item->total) }}</td>
             </tr>
             @endforeach
         </tbody>
@@ -160,27 +160,27 @@
     <div class="totals">
         <div class="total-row">
             <span class="total-label">Subtotal</span>
-            <span class="total-value">{{ number_format($invoice->subtotal, 2) }}</span>
+            <span class="total-value">{{ money($invoice->subtotal) }}</span>
         </div>
         @if($invoice->discount > 0)
         <div class="total-row">
             <span class="total-label">Discount</span>
-            <span class="total-value" style="color:#dc2626;">-{{ number_format($invoice->discount, 2) }}</span>
+            <span class="total-value" style="color:#dc2626;">-{{ money($invoice->discount) }}</span>
         </div>
         @endif
         <div class="total-row grand-total">
             <span class="total-label">Total</span>
-            <span class="total-value">{{ number_format($invoice->total, 2) }}</span>
+            <span class="total-value">{{ money($invoice->total) }}</span>
         </div>
         @if($invoice->amount_paid > 0)
         <div class="total-row" style="margin-top:4px;">
             <span class="total-label" style="color:#16a34a;">Amount Paid</span>
-            <span class="total-value" style="color:#16a34a;">{{ number_format($invoice->amount_paid, 2) }}</span>
+            <span class="total-value" style="color:#16a34a;">{{ money($invoice->amount_paid) }}</span>
         </div>
         @if($invoice->balance > 0)
         <div class="total-row">
             <span class="total-label" style="color:#d97706;">Balance Due</span>
-            <span class="total-value" style="color:#d97706;font-weight:700;">{{ number_format($invoice->balance, 2) }}</span>
+            <span class="total-value" style="color:#d97706;font-weight:700;">{{ money($invoice->balance) }}</span>
         </div>
         @endif
         @endif

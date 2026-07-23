@@ -20,7 +20,7 @@
                     <p class="text-white font-medium">{{ $invoice->invoice_number }}</p>
                     <p class="text-white/40 text-xs">{{ $invoice->created_at->format('d M Y') }} · {{ $invoice->items->count() }} item(s)</p>
                     @if($invoice->status !== 'paid' && $invoice->balance > 0)
-                    <p class="text-yellow-400/80 text-xs mt-0.5">Balance due: {{ number_format($invoice->balance, 2) }}</p>
+                    <p class="text-yellow-400/80 text-xs mt-0.5">Balance due: {{ money($invoice->balance) }}</p>
                     @elseif($invoice->paid_at)
                     <p class="text-green-400/70 text-xs mt-0.5">Paid {{ $invoice->paid_at->format('d M Y') }}</p>
                     @endif
@@ -28,7 +28,7 @@
             </div>
             <div class="flex items-center gap-3 flex-shrink-0">
                 <div class="text-right">
-                    <p class="text-white font-bold">{{ number_format($invoice->total, 2) }}</p>
+                    <p class="text-white font-bold">{{ money($invoice->total) }}</p>
                     <span class="badge badge-{{ $invoice->status_color }} text-xs">{{ ucfirst($invoice->status) }}</span>
                 </div>
                 <a href="{{ route('patient.invoices.download', [$currentTenant->slug, $invoice]) }}"

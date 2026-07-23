@@ -20,7 +20,7 @@
         ['key' => 'patients',     'label' => 'Total Patients',   'color' => 'indigo',  'icon' => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', 'prefix' => '', 'suffix' => ''],
         ['key' => 'appointments', 'label' => "Today's Appointments", 'color' => 'blue', 'icon' => 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', 'prefix' => '', 'suffix' => ''],
         ['key' => 'orders',       'label' => 'Active Orders',    'color' => 'purple', 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', 'prefix' => '', 'suffix' => ''],
-        ['key' => 'revenue',      'label' => 'Revenue This Month', 'color' => 'green', 'icon' => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'prefix' => '$', 'suffix' => ''],
+        ['key' => 'revenue',      'label' => 'Revenue This Month', 'color' => 'green', 'icon' => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'prefix' => 'PKR ', 'suffix' => ''],
     ];
     @endphp
     @foreach($statCards as $card)
@@ -34,7 +34,7 @@
             </div>
         </div>
         <p class="text-2xl font-bold text-white">
-            {{ $card['prefix'] }}<span x-text="counts['{{ $card['key'] }}']{{ $card['key'] === 'revenue' ? '.toFixed(0)' : '' }}"></span>{{ $card['suffix'] }}
+            {{ $card['prefix'] }}<span x-text="{{ $card['key'] === 'revenue' ? "counts['revenue'].toLocaleString()" : "counts['{$card['key']}']" }}"></span>{{ $card['suffix'] }}
         </p>
         <p class="text-white/40 text-sm mt-1">{{ $card['label'] }}</p>
     </div>
@@ -51,6 +51,77 @@
         <h3 class="text-white font-medium mb-4">Revenue (6 months)</h3>
         <div id="revenueChart"></div>
     </div>
+</div>
+
+{{-- Cash & Bank Collections --}}
+@php
+    $cbColors     = ['#f59e0b', '#6366f1', '#22c55e', '#ec4899', '#0ea5e9', '#a855f7', '#14b8a6', '#f97316'];
+    $cbLabels     = collect(['Cash'])->merge($cashBank['banks']->pluck('name'))->toJson();
+    $cbMonthData  = collect([$cashBank['cash_this_month']])->merge($cashBank['banks']->pluck('this_month'))->toJson();
+    $cbAllData    = collect([$cashBank['cash_all_time']])->merge($cashBank['banks']->pluck('all_time'))->toJson();
+    $cbColorsJson = json_encode(array_slice($cbColors, 0, $cashBank['banks']->count() + 1));
+    $cbTotalMonth = $cashBank['cash_this_month'] + $cashBank['bank_this_month'];
+    $cbTotalAll   = $cashBank['cash_all_time'] + $cashBank['bank_all_time'];
+@endphp
+<div class="glass-card p-6 mb-5">
+    <h3 class="text-white font-medium mb-4">Cash &amp; Bank Collections</h3>
+
+    @if($cbTotalMonth == 0 && $cbTotalAll == 0)
+    <p class="text-white/30 text-sm">No payments recorded yet.</p>
+    @else
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center" x-data="{
+        period: 'month',
+        monthData: {{ $cbMonthData }},
+        allData: {{ $cbAllData }},
+        chart: null,
+        init() {
+            this.chart = new ApexCharts(this.$refs.donut, {
+                chart: { type: 'donut', height: 220, fontFamily: 'Inter, sans-serif' },
+                series: this.monthData,
+                labels: {{ $cbLabels }},
+                colors: {{ $cbColorsJson }},
+                legend: { show: false },
+                dataLabels: { enabled: false },
+                stroke: { width: 2, colors: ['#fff'] },
+                tooltip: { theme: 'light', y: { formatter: (v) => 'PKR ' + Number(v).toLocaleString() } },
+                plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', formatter: (w) => 'PKR ' + w.globals.seriesTotals.reduce((a,b) => a+b, 0).toLocaleString() } } } } },
+            });
+            this.chart.render();
+        }
+    }" x-effect="chart && chart.updateSeries(period === 'month' ? monthData : allData)">
+        <div>
+            <div class="flex gap-1 p-1 rounded-lg mb-3 w-fit" style="background:rgba(0,0,0,0.04);">
+                <button type="button" @click="period = 'month'"
+                        :style="period === 'month' ? 'background:rgba(99,102,241,0.15); color:#6366f1;' : 'color:#64748b;'"
+                        class="px-3 py-1 rounded-md text-xs font-medium transition-all">This Month</button>
+                <button type="button" @click="period = 'all'"
+                        :style="period === 'all' ? 'background:rgba(99,102,241,0.15); color:#6366f1;' : 'color:#64748b;'"
+                        class="px-3 py-1 rounded-md text-xs font-medium transition-all">All Time</button>
+            </div>
+            <div x-ref="donut"></div>
+        </div>
+        <div class="space-y-2">
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/5">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:{{ $cbColors[0] }};"></span>
+                    <span class="text-white text-sm">Cash</span>
+                </div>
+                <span class="text-white text-sm font-medium"
+                      x-text="period === 'month' ? '{{ money($cashBank['cash_this_month']) }}' : '{{ money($cashBank['cash_all_time']) }}'"></span>
+            </div>
+            @foreach($cashBank['banks'] as $i => $bank)
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/5">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:{{ $cbColors[($i + 1) % count($cbColors)] }};"></span>
+                    <span class="text-white text-sm">{{ $bank['name'] }}</span>
+                </div>
+                <span class="text-white text-sm font-medium"
+                      x-text="period === 'month' ? '{{ money($bank['this_month']) }}' : '{{ money($bank['all_time']) }}'"></span>
+            </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
 </div>
 
 {{-- Bottom row --}}
@@ -99,7 +170,7 @@
                     <p class="text-white/30 text-xs">{{ $inv->invoice_number }}</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-white text-sm font-medium">{{ number_format($inv->total, 2) }}</p>
+                    <p class="text-white text-sm font-medium">{{ money($inv->total) }}</p>
                     <span class="badge badge-{{ $inv->status_color }} text-xs">{{ ucfirst($inv->status) }}</span>
                 </div>
             </div>
@@ -167,9 +238,9 @@ document.addEventListener('DOMContentLoaded', function () {
         ...commonOpts,
         series: [{ name: 'Revenue', data: {!! $rvTotals !!} }],
         xaxis: { ...commonOpts.xaxis, categories: {!! $rvMonths !!} },
-        yaxis: { ...commonOpts.yaxis, labels: { ...commonOpts.yaxis.labels, formatter: (v) => '$' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : Math.round(v)) } },
+        yaxis: { ...commonOpts.yaxis, labels: { ...commonOpts.yaxis.labels, formatter: (v) => 'PKR ' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : Math.round(v)) } },
         colors: ['#22c55e'],
-        tooltip: { ...commonOpts.tooltip, y: { formatter: (v) => '$' + Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) } },
+        tooltip: { ...commonOpts.tooltip, y: { formatter: (v) => 'PKR ' + Number(v).toLocaleString() } },
     }).render();
 });
 </script>

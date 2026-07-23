@@ -68,7 +68,7 @@
                 <a href="{{ route('branch.invoices.show', [$currentTenant->slug, $order->invoice]) }}" class="text-indigo-500 text-xs hover:underline">View &rarr;</a>
             </div>
             <div class="space-y-2 text-sm">
-                <div class="flex justify-between"><span style="color:#94a3b8;">Total</span><span class="font-medium" style="color:#1e293b;">{{ number_format($order->invoice->total, 2) }}</span></div>
+                <div class="flex justify-between"><span style="color:#94a3b8;">Total</span><span class="font-medium" style="color:#1e293b;">{{ money($order->invoice->total) }}</span></div>
                 <div class="flex justify-between"><span style="color:#94a3b8;">Status</span>
                     <span class="badge badge-{{ $order->invoice->status === 'paid' ? 'success' : 'warning' }}">{{ ucfirst($order->invoice->status) }}</span>
                 </div>

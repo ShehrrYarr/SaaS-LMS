@@ -174,7 +174,7 @@
                 <h3 class="text-white font-semibold">Select Tests</h3>
                 <div class="text-right">
                     <p class="text-white/40 text-xs"><span x-text="selectedTests.length"></span> selected</p>
-                    <p class="text-white font-semibold">Total: <span x-text="total.toFixed(2)"></span></p>
+                    <p class="text-white font-semibold">Total: <span x-text="'PKR ' + Math.round(total).toLocaleString()"></span></p>
                 </div>
             </div>
 
@@ -231,7 +231,7 @@
                                             <span class="text-white/30 text-xs ml-1" x-text="test.code"></span>
                                         </template>
                                     </div>
-                                    <span class="text-white/60 text-sm font-medium flex-shrink-0" x-text="parseFloat(test.price).toFixed(2)"></span>
+                                    <span class="text-white/60 text-sm font-medium flex-shrink-0" x-text="'PKR ' + Math.round(parseFloat(test.price)).toLocaleString()"></span>
                                 </label>
                             </template>
                         </div>
@@ -245,7 +245,7 @@
         </div>
 
         <div x-show="selectedTests.length > 0" class="glass-card p-4 border-indigo-500/20 bg-indigo-500/5">
-            <p class="text-white/60 text-sm"><span class="text-white font-semibold" x-text="selectedTests.length"></span> test(s) selected — an invoice for <strong x-text="total.toFixed(2)"></strong> will be auto-generated.</p>
+            <p class="text-white/60 text-sm"><span class="text-white font-semibold" x-text="selectedTests.length"></span> test(s) selected — an invoice for <strong x-text="'PKR ' + Math.round(total).toLocaleString()"></strong> will be auto-generated.</p>
         </div>
 
         <div class="flex gap-3">

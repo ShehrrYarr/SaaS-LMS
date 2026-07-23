@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Invoice;
+use App\Models\InvoicePayment;
+use App\Models\LabBank;
 use App\Models\Patient;
 use App\Models\TestOrder;
 use Illuminate\Support\Facades\DB;
@@ -70,8 +72,41 @@ class DashboardController extends Controller
         $pendingPayments = Invoice::where('status', '!=', 'paid')
             ->with('patient')->latest()->limit(5)->get();
 
+        // Cash vs Bank collections — this month & all-time
+        $startOfMonth = now()->startOfMonth();
+
+        $cashThisMonth = (float) InvoicePayment::where('method', 'cash')
+            ->where('paid_at', '>=', $startOfMonth)->sum('amount');
+        $cashAllTime = (float) InvoicePayment::where('method', 'cash')->sum('amount');
+
+        $bankRowsThisMonth = InvoicePayment::where('method', 'bank')
+            ->where('paid_at', '>=', $startOfMonth)
+            ->select('bank_id', DB::raw('SUM(amount) as total'))
+            ->groupBy('bank_id')->pluck('total', 'bank_id');
+
+        $bankRowsAllTime = InvoicePayment::where('method', 'bank')
+            ->select('bank_id', DB::raw('SUM(amount) as total'))
+            ->groupBy('bank_id')->pluck('total', 'bank_id');
+
+        $bankBreakdown = LabBank::orderBy('name')->get()
+            ->map(fn($bank) => [
+                'name'       => $bank->name,
+                'this_month' => (float) ($bankRowsThisMonth[$bank->id] ?? 0),
+                'all_time'   => (float) ($bankRowsAllTime[$bank->id] ?? 0),
+            ])
+            ->filter(fn($b) => $b['this_month'] > 0 || $b['all_time'] > 0)
+            ->values();
+
+        $cashBank = [
+            'cash_this_month' => $cashThisMonth,
+            'cash_all_time'   => $cashAllTime,
+            'bank_this_month' => (float) $bankRowsThisMonth->sum(),
+            'bank_all_time'   => (float) $bankRowsAllTime->sum(),
+            'banks'           => $bankBreakdown,
+        ];
+
         return view('tenant.dashboard', compact(
-            'stats', 'patientGrowth', 'revenueData', 'orderStatus', 'recentOrders', 'pendingPayments'
+            'stats', 'patientGrowth', 'revenueData', 'orderStatus', 'recentOrders', 'pendingPayments', 'cashBank'
         ));
     }
 }

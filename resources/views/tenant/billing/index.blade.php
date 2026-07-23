@@ -49,12 +49,12 @@
                        class="text-white text-sm hover:text-indigo-300 transition-colors">{{ $invoice->patient->name ?? '—' }}</a>
                     <p class="text-white/30 text-xs">{{ $invoice->created_at->format('d M Y') }}</p>
                 </td>
-                <td class="hidden md:table-cell text-white/50 text-sm">{{ number_format($invoice->subtotal, 2) }}</td>
+                <td class="hidden md:table-cell text-white/50 text-sm">{{ money($invoice->subtotal) }}</td>
                 <td class="hidden md:table-cell text-white/50 text-sm">
-                    {{ $invoice->discount > 0 ? '-' . number_format($invoice->discount, 2) : '—' }}
+                    {{ $invoice->discount > 0 ? '-' . money($invoice->discount) : '—' }}
                 </td>
-                <td class="text-white font-semibold text-sm">{{ number_format($invoice->total, 2) }}</td>
-                <td class="hidden lg:table-cell text-green-400 text-sm">{{ $invoice->amount_paid > 0 ? number_format($invoice->amount_paid, 2) : '—' }}</td>
+                <td class="text-white font-semibold text-sm">{{ money($invoice->total) }}</td>
+                <td class="hidden lg:table-cell text-green-400 text-sm">{{ $invoice->amount_paid > 0 ? money($invoice->amount_paid) : '—' }}</td>
                 <td>
                     <span class="badge badge-{{ $invoice->status_color }}">{{ ucfirst($invoice->status) }}</span>
                 </td>

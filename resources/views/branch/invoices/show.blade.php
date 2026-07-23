@@ -48,35 +48,35 @@
                     <tr style="border-bottom: 1px solid rgba(0,0,0,0.04);">
                         <td class="py-3" style="color:#1e293b;">{{ $item->description }}</td>
                         <td class="py-3 text-center" style="color:#64748b;">{{ $item->quantity }}</td>
-                        <td class="py-3 text-right" style="color:#64748b;">{{ number_format($item->unit_price, 2) }}</td>
-                        <td class="py-3 text-right font-medium" style="color:#1e293b;">{{ number_format($item->total, 2) }}</td>
+                        <td class="py-3 text-right" style="color:#64748b;">{{ money($item->unit_price) }}</td>
+                        <td class="py-3 text-right font-medium" style="color:#1e293b;">{{ money($item->total) }}</td>
                     </tr>
                     @endforeach
                 </tbody>
                 <tfoot>
                     <tr>
                         <td colspan="3" class="py-2 text-right" style="color:#94a3b8;">Subtotal</td>
-                        <td class="py-2 text-right" style="color:#1e293b;">{{ number_format($invoice->subtotal, 2) }}</td>
+                        <td class="py-2 text-right" style="color:#1e293b;">{{ money($invoice->subtotal) }}</td>
                     </tr>
                     @if($invoice->discount > 0)
                     <tr>
                         <td colspan="3" class="py-1 text-right" style="color:#94a3b8;">Discount</td>
-                        <td class="py-1 text-right" style="color:#ef4444;">-{{ number_format($invoice->discount, 2) }}</td>
+                        <td class="py-1 text-right" style="color:#ef4444;">-{{ money($invoice->discount) }}</td>
                     </tr>
                     @endif
                     <tr style="border-top: 1px solid rgba(0,0,0,0.1);">
                         <td colspan="3" class="py-2 text-right font-bold" style="color:#1e293b;">Total</td>
-                        <td class="py-2 text-right font-bold text-lg" style="color:#1e293b;">{{ number_format($invoice->total, 2) }}</td>
+                        <td class="py-2 text-right font-bold text-lg" style="color:#1e293b;">{{ money($invoice->total) }}</td>
                     </tr>
                     @if($invoice->amount_paid > 0)
                     <tr>
                         <td colspan="3" class="py-1 text-right" style="color:#94a3b8;">Amount Paid</td>
-                        <td class="py-1 text-right font-medium" style="color:#16a34a;">{{ number_format($invoice->amount_paid, 2) }}</td>
+                        <td class="py-1 text-right font-medium" style="color:#16a34a;">{{ money($invoice->amount_paid) }}</td>
                     </tr>
                     @if($invoice->balance > 0)
                     <tr>
                         <td colspan="3" class="py-1 text-right" style="color:#94a3b8;">Balance Due</td>
-                        <td class="py-1 text-right font-semibold" style="color:#d97706;">{{ number_format($invoice->balance, 2) }}</td>
+                        <td class="py-1 text-right font-semibold" style="color:#d97706;">{{ money($invoice->balance) }}</td>
                     </tr>
                     @endif
                     @endif
@@ -100,7 +100,7 @@
                             @if($payment->notes) &middot; {{ $payment->notes }}@endif
                         </p>
                     </div>
-                    <span class="font-semibold text-sm" style="color:#1e293b;">{{ number_format($payment->amount, 2) }}</span>
+                    <span class="font-semibold text-sm" style="color:#1e293b;">{{ money($payment->amount) }}</span>
                 </div>
                 @endforeach
             </div>
@@ -115,7 +115,7 @@
             <h4 class="font-semibold text-sm mb-1" style="color:#1e293b;">Add Payment</h4>
             @if($invoice->balance > 0)
             <p class="text-xs mb-4" style="color:#94a3b8;">
-                Balance due: <span class="font-semibold" style="color:#d97706;">{{ number_format($invoice->balance, 2) }}</span>
+                Balance due: <span class="font-semibold" style="color:#d97706;">{{ money($invoice->balance) }}</span>
             </p>
             @endif
 

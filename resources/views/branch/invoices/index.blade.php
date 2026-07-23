@@ -44,8 +44,8 @@
                 </td>
                 <td class="text-sm" style="color:#64748b;">{{ $invoice->patient->name ?? '—' }}</td>
                 <td class="hidden md:table-cell text-sm" style="color:#94a3b8;">{{ $invoice->created_at->format('d M Y') }}</td>
-                <td class="text-sm font-medium" style="color:#1e293b;">{{ number_format($invoice->total, 2) }}</td>
-                <td class="hidden sm:table-cell text-sm" style="color: {{ $invoice->balance > 0 ? '#d97706' : '#16a34a' }};">{{ number_format($invoice->balance, 2) }}</td>
+                <td class="text-sm font-medium" style="color:#1e293b;">{{ money($invoice->total) }}</td>
+                <td class="hidden sm:table-cell text-sm" style="color: {{ $invoice->balance > 0 ? '#d97706' : '#16a34a' }};">{{ money($invoice->balance) }}</td>
                 <td><span class="badge badge-{{ $invoice->status_color }}">{{ ucfirst($invoice->status) }}</span></td>
             </tr>
             @empty

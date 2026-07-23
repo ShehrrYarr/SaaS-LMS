@@ -73,7 +73,7 @@
                     <p class="text-xs" style="color:#94a3b8;">{{ $invoice->created_at->format('d M Y') }}</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-sm font-medium" style="color:#1e293b;">{{ number_format($invoice->total, 2) }}</p>
+                    <p class="text-sm font-medium" style="color:#1e293b;">{{ money($invoice->total) }}</p>
                     <span class="badge badge-{{ $invoice->status_color }}">{{ ucfirst($invoice->status) }}</span>
                 </div>
             </a>

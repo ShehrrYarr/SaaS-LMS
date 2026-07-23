@@ -223,7 +223,7 @@
                             <span class="flex-1 text-white text-sm" x-text="t.name"></span>
                             <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
                                   x-show="t.result_type === 'text'" style="background:rgba(59,130,246,0.15); color:#60a5fa;">text</span>
-                            <span class="text-white/30 text-xs flex-shrink-0" x-text="parseFloat(t.price).toFixed(2)"></span>
+                            <span class="text-white/30 text-xs flex-shrink-0" x-text="'PKR ' + Math.round(parseFloat(t.price)).toLocaleString()"></span>
                         </button>
                     </template>
                     <template x-if="filteredTests.length === 0">

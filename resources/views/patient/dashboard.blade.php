@@ -97,7 +97,7 @@
                     <p class="text-white/30 text-xs">{{ $inv->created_at->format('d M Y') }}</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-white text-sm font-semibold">{{ number_format($inv->total, 2) }}</p>
+                    <p class="text-white text-sm font-semibold">{{ money($inv->total) }}</p>
                     <span class="badge badge-{{ $inv->status_color }} text-xs">{{ ucfirst($inv->status) }}</span>
                 </div>
                 <a href="{{ route('patient.invoices.download', [$currentTenant->slug, $inv]) }}"

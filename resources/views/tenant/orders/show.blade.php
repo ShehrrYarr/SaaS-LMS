@@ -170,7 +170,7 @@
                 <a href="{{ route('tenant.billing.show', [$currentTenant->slug, $order->invoice]) }}" class="text-indigo-400 text-xs hover:underline">View &rarr;</a>
             </div>
             <div class="space-y-2 text-sm">
-                <div class="flex justify-between"><span class="text-white/40">Total</span><span class="text-white font-medium">{{ number_format($order->invoice->total, 2) }}</span></div>
+                <div class="flex justify-between"><span class="text-white/40">Total</span><span class="text-white font-medium">{{ money($order->invoice->total) }}</span></div>
                 <div class="flex justify-between"><span class="text-white/40">Status</span>
                     <span class="badge badge-{{ $order->invoice->status === 'paid' ? 'success' : 'warning' }}">{{ ucfirst($order->invoice->status) }}</span>
                 </div>

@@ -82,7 +82,7 @@
                 <td><span class="badge badge-info text-xs">{{ $test->category ?? '—' }}</span></td>
                 <td class="hidden md:table-cell text-white/50 text-sm">{{ $test->code ?? '—' }}</td>
                 <td class="hidden lg:table-cell text-white/50 text-sm">{{ $test->normal_range ?? '—' }}</td>
-                <td class="text-white font-medium text-sm">{{ number_format($test->price, 2) }}</td>
+                <td class="text-white font-medium text-sm">{{ money($test->price) }}</td>
                 <td>
                     <span class="badge badge-{{ $test->is_active ? 'success' : 'gray' }}">
                         {{ $test->is_active ? 'Active' : 'Inactive' }}

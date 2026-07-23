@@ -11,7 +11,7 @@
         ['Total Orders', $stats['orders'], '#8b5cf6'],
         ['In Progress', $stats['pending'], '#f59e0b'],
         ['Reports Ready', $stats['reports_ready'], '#10b981'],
-        ['Unpaid Balance', number_format($stats['unpaid'], 2), '#ef4444'],
+        ['Unpaid Balance', money($stats['unpaid']), '#ef4444'],
     ] as [$label, $value, $color])
     <div class="glass-card p-5">
         <p class="text-2xl font-bold" style="color: {{ $color }};">{{ $value }}</p>
