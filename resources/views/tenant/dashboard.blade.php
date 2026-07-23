@@ -113,15 +113,38 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const axisLabel  = { colors: 'rgba(30,41,59,0.55)', fontSize: '12px', fontFamily: 'Inter, sans-serif', fontWeight: 500 };
+
     const commonOpts = {
-        chart: { type: 'area', height: 200, toolbar: { show: false }, background: 'transparent' },
-        stroke: { curve: 'smooth', width: 2 },
-        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.02, stops: [0, 90, 100] } },
+        chart: {
+            type: 'area', height: 230, toolbar: { show: false }, background: 'transparent',
+            fontFamily: 'Inter, sans-serif',
+            animations: { enabled: true, easing: 'easeinout', speed: 500 },
+        },
+        stroke: { curve: 'smooth', width: 2.5 },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.03, stops: [0, 90, 100] } },
         dataLabels: { enabled: false },
-        grid: { borderColor: 'rgba(255,255,255,0.06)', strokeDashArray: 3 },
-        xaxis: { labels: { style: { colors: 'rgba(255,255,255,0.4)', fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
-        yaxis: { labels: { style: { colors: 'rgba(255,255,255,0.4)', fontSize: '11px' } } },
-        tooltip: { theme: 'dark' },
+        grid: {
+            borderColor: 'rgba(30,41,59,0.08)', strokeDashArray: 4,
+            padding: { left: 8, right: 8 },
+            yaxis: { lines: { show: true } },
+        },
+        markers: {
+            size: 4, strokeWidth: 2, strokeColors: '#fff', hover: { size: 6 },
+        },
+        xaxis: {
+            labels: { style: axisLabel, offsetY: 2 },
+            axisBorder: { show: false },
+            axisTicks: { show: false },
+        },
+        yaxis: {
+            labels: { style: axisLabel, offsetX: -4 },
+        },
+        tooltip: {
+            theme: 'light',
+            style: { fontFamily: 'Inter, sans-serif', fontSize: '12px' },
+            x: { show: true },
+        },
     };
 
     @php
@@ -135,14 +158,18 @@ document.addEventListener('DOMContentLoaded', function () {
         ...commonOpts,
         series: [{ name: 'Patients', data: {!! $pgCounts !!} }],
         xaxis: { ...commonOpts.xaxis, categories: {!! $pgMonths !!} },
+        yaxis: { ...commonOpts.yaxis, labels: { ...commonOpts.yaxis.labels, formatter: (v) => Math.round(v) } },
         colors: ['#6366f1'],
+        tooltip: { ...commonOpts.tooltip, y: { formatter: (v) => v + (v === 1 ? ' patient' : ' patients') } },
     }).render();
 
     new ApexCharts(document.querySelector('#revenueChart'), {
         ...commonOpts,
         series: [{ name: 'Revenue', data: {!! $rvTotals !!} }],
         xaxis: { ...commonOpts.xaxis, categories: {!! $rvMonths !!} },
+        yaxis: { ...commonOpts.yaxis, labels: { ...commonOpts.yaxis.labels, formatter: (v) => '$' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : Math.round(v)) } },
         colors: ['#22c55e'],
+        tooltip: { ...commonOpts.tooltip, y: { formatter: (v) => '$' + Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) } },
     }).render();
 });
 </script>
