@@ -11,6 +11,8 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        require_once base_path('app/helpers.php');
+
         $this->app->singleton(TenantContext::class, fn () => new TenantContext());
     }
 
