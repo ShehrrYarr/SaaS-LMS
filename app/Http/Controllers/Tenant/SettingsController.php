@@ -152,13 +152,24 @@ class SettingsController extends Controller
     {
         $tenant = $this->context->get();
 
-        $logoUrl = null;
-        $signatureUrl = null;
-
-        if ($p = $tenant->getSetting('report_logo')) {
-            $abs = storage_path('app/public/' . $p);
-            if (file_exists($abs)) $logoUrl = Storage::url($p);
+        // Build logosMap: key → {url, label} for all uploaded logos
+        $logosMap = [];
+        $logosRaw = json_decode($tenant->getSetting('report_logos', '[]'), true) ?: [];
+        foreach ($logosRaw as $lg) {
+            $abs = storage_path('app/public/' . $lg['path']);
+            if (file_exists($abs)) {
+                $logosMap[$lg['key']] = ['url' => Storage::url($lg['path']), 'label' => $lg['label']];
+            }
         }
+        // Backward compat: expose old single logo if no multi-logos set yet
+        if (empty($logosMap) && $p = $tenant->getSetting('report_logo')) {
+            $abs = storage_path('app/public/' . $p);
+            if (file_exists($abs)) {
+                $logosMap['logo_primary'] = ['url' => Storage::url($p), 'label' => 'Logo'];
+            }
+        }
+
+        $signatureUrl = null;
         if ($p = $tenant->getSetting('report_signature')) {
             $abs = storage_path('app/public/' . $p);
             if (file_exists($abs)) $signatureUrl = Storage::url($p);
@@ -168,7 +179,7 @@ class SettingsController extends Controller
         $invoiceTemplate = $tenant->getSetting('invoice_template');
 
         return view('tenant.settings.template-builder',
-            compact('tenant', 'logoUrl', 'signatureUrl', 'reportTemplate', 'invoiceTemplate'));
+            compact('tenant', 'logosMap', 'signatureUrl', 'reportTemplate', 'invoiceTemplate'));
     }
 
     public function saveTemplate(Request $request, string $lab_slug, string $type)
@@ -184,19 +195,43 @@ class SettingsController extends Controller
 
     public function updateBranding(Request $request, string $lab_slug)
     {
-        $request->validate([
-            'report_logo'        => 'nullable|image|max:2048',
+        $rules = [
             'report_signature'   => 'nullable|image|max:2048',
             'report_header_html' => 'nullable|string|max:5000',
             'report_footer_html' => 'nullable|string|max:5000',
-        ]);
+        ];
+        for ($i = 0; $i < 5; $i++) {
+            $rules["logo_{$i}_file"]  = 'nullable|image|max:2048';
+            $rules["logo_{$i}_label"] = 'nullable|string|max:100';
+            $rules["logo_{$i}_key"]   = 'nullable|string|max:50';
+        }
+        $request->validate($rules);
 
         $tenant = $this->context->get();
 
-        if ($request->hasFile('report_logo')) {
-            $path = $request->file('report_logo')->store("tenants/{$tenant->id}/branding", 'public');
-            $tenant->setSetting('report_logo', $path);
+        // Multi-logo: collect up to 5 slots, preserve existing paths for unchanged slots
+        $existingLogos = json_decode($tenant->getSetting('report_logos', '[]'), true) ?: [];
+        $existingByKey = collect($existingLogos)->keyBy('key')->toArray();
+
+        $logos = [];
+        for ($i = 0; $i < 5; $i++) {
+            $key   = $request->input("logo_{$i}_key");
+            $label = trim($request->input("logo_{$i}_label", ''));
+
+            if (!$label && !$request->hasFile("logo_{$i}_file")) continue;
+
+            $key  = $key ?: ('logo_' . uniqid());
+            $path = isset($existingByKey[$key]) ? $existingByKey[$key]['path'] : null;
+
+            if ($request->hasFile("logo_{$i}_file")) {
+                $path = $request->file("logo_{$i}_file")->store("tenants/{$tenant->id}/branding", 'public');
+            }
+
+            if ($path) {
+                $logos[] = ['key' => $key, 'label' => $label ?: ('Logo ' . ($i + 1)), 'path' => $path];
+            }
         }
+        $tenant->setSetting('report_logos', json_encode($logos));
 
         if ($request->hasFile('report_signature')) {
             $path = $request->file('report_signature')->store("tenants/{$tenant->id}/branding", 'public');

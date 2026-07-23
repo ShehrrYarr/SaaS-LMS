@@ -13,7 +13,7 @@
     x-data="templateBuilder(
         {{ json_encode($reportTemplate) }},
         {{ json_encode($invoiceTemplate) }},
-        {{ json_encode($logoUrl) }},
+        {{ json_encode($logosMap) }},
         {{ json_encode($signatureUrl) }},
         '{{ route('tenant.settings.template-builder.save', [$currentTenant->slug, '__TYPE__']) }}'
     )"
@@ -65,7 +65,6 @@
                 <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:#94a3b8;">Elements</p>
                 <div class="space-y-0.5">
                     @foreach([
-                        ['logo',        'Logo',         'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'],
                         ['lab_name',    'Lab Name',     'M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4z'],
                         ['contact',     'Contact Info', 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
                         ['signature',   'Signature',    'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'],
@@ -83,6 +82,28 @@
                         {{ $elabel }}
                     </button>
                     @endforeach
+                </div>
+
+                {{-- Per-logo buttons — one per uploaded logo --}}
+                <p class="text-xs font-semibold uppercase tracking-wider mt-3 mb-1" style="color:#94a3b8;">Logos</p>
+                <div class="space-y-0.5">
+                    <template x-for="entry in Object.entries(logosMap)" :key="entry[0]">
+                        <button @click="addLogoElement(entry[0])"
+                                class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all text-left"
+                                style="color:#475569;"
+                                @mouseover="$el.style.background='rgba(99,102,241,0.06)'; $el.style.color='#6366f1';"
+                                @mouseout="$el.style.background=''; $el.style.color='#475569';">
+                            <img :src="entry[1].url" class="w-5 h-4 object-contain rounded flex-shrink-0"
+                                 style="background:rgba(255,255,255,0.7);">
+                            <span x-text="entry[1].label" class="truncate"></span>
+                        </button>
+                    </template>
+                    <div x-show="Object.keys(logosMap).length === 0"
+                         class="text-xs px-2 py-2 rounded-lg" style="color:#cbd5e1; background:rgba(0,0,0,0.02);">
+                        No logos yet.<br>
+                        <a href="{{ route('tenant.settings.index', $currentTenant->slug) }}" target="_blank"
+                           style="color:#818cf8;" class="underline">Upload in Settings → PDF Branding</a>
+                    </div>
                 </div>
             </div>
 
@@ -268,10 +289,28 @@
                         </div>
                     </template>
 
-                    {{-- Image upload hint --}}
-                    <template x-if="selectedEl && ['logo','signature'].includes(selectedEl.type)">
+                    {{-- Logo picker (when a logo element is selected) --}}
+                    <template x-if="selectedEl && selectedEl.type === 'logo'">
+                        <div class="space-y-2">
+                            <div>
+                                <label class="form-label text-xs">Logo</label>
+                                <select x-model="selectedEl.logoKey" class="glass-input text-xs">
+                                    <template x-for="entry in Object.entries(logosMap)" :key="entry[0]">
+                                        <option :value="entry[0]" x-text="entry[1].label"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="text-xs p-2 rounded-lg" style="background:rgba(99,102,241,0.05);color:#6366f1;">
+                                Add / remove logos in
+                                <a href="{{ route('tenant.settings.index', $currentTenant->slug) }}" target="_blank" class="underline">Settings → PDF Branding</a>
+                            </div>
+                        </div>
+                    </template>
+
+                    {{-- Signature upload hint --}}
+                    <template x-if="selectedEl && selectedEl.type === 'signature'">
                         <div class="text-xs p-2 rounded-lg" style="background:rgba(99,102,241,0.05);color:#6366f1;">
-                            Upload image in
+                            Upload signature in
                             <a href="{{ route('tenant.settings.index', $currentTenant->slug) }}" target="_blank" class="underline">Settings → PDF Branding</a>
                         </div>
                     </template>
@@ -321,7 +360,7 @@
 </div>
 
 <script>
-function templateBuilder(reportJson, invoiceJson, logoUrl, signatureUrl, saveUrlTemplate) {
+function templateBuilder(reportJson, invoiceJson, logosMap, signatureUrl, saveUrlTemplate) {
     const CANVAS_W = 720;
 
     const parseOrDefault = (json, accent) => {
@@ -337,6 +376,7 @@ function templateBuilder(reportJson, invoiceJson, logoUrl, signatureUrl, saveUrl
         saving: false,
         saveMsg: '',
         saveOk: true,
+        logosMap: logosMap || {},
 
         dragging: null,   // { el, section, startX, startY, origX, origY }
         resizing: null,   // { el, section, startX, startY, origW, origH }
@@ -362,7 +402,6 @@ function templateBuilder(reportJson, invoiceJson, logoUrl, signatureUrl, saveUrl
         /* ---- Elements ---- */
         addElement(type) {
             const defaults = {
-                logo:        { w:150, h:65 },
                 lab_name:    { w:280, h:38, text:'Your Lab Name', fontSize:20, fontWeight:'bold', color:'#1e293b', textAlign:'left' },
                 contact:     { w:260, h:72, text:'Address Line 1, City\nPhone: +92-300-0000000\nEmail: info@lab.com', fontSize:10, fontWeight:'normal', color:'#475569', textAlign:'left' },
                 signature:   { w:130, h:60 },
@@ -370,6 +409,13 @@ function templateBuilder(reportJson, invoiceJson, logoUrl, signatureUrl, saveUrl
                 divider:     { w:720, h:2,  color:null },
             };
             const el = { id: Date.now().toString(), type, section: this.addSection, x:10, y:10, ...(defaults[type]||{w:150,h:40}) };
+            this.tpl.elements.push(el);
+            this.selectedId = el.id;
+            this.activeSection = this.addSection;
+        },
+
+        addLogoElement(logoKey) {
+            const el = { id: Date.now().toString(), type: 'logo', logoKey, section: this.addSection, x: 10, y: 10, w: 150, h: 65 };
             this.tpl.elements.push(el);
             this.selectedId = el.id;
             this.activeSection = this.addSection;
@@ -398,9 +444,15 @@ function templateBuilder(reportJson, invoiceJson, logoUrl, signatureUrl, saveUrl
         elContent(el) {
             const ac = this.tpl.accentColor;
             if (el.type === 'logo') {
-                return logoUrl
-                    ? `<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;" draggable="false">`
-                    : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(99,102,241,0.07);border:1.5px dashed #a5b4fc;border-radius:4px;font-size:10px;color:#818cf8;">Logo</div>`;
+                // Resolve by logoKey, fall back to first logo for backward compat
+                const logoData = (el.logoKey && this.logosMap[el.logoKey])
+                    ? this.logosMap[el.logoKey]
+                    : Object.values(this.logosMap)[0];
+                const url   = logoData?.url   || null;
+                const label = logoData?.label || 'Logo';
+                return url
+                    ? `<img src="${url}" style="width:100%;height:100%;object-fit:contain;" draggable="false">`
+                    : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(99,102,241,0.07);border:1.5px dashed #a5b4fc;border-radius:4px;font-size:10px;color:#818cf8;">${label}</div>`;
             }
             if (el.type === 'signature') {
                 return signatureUrl

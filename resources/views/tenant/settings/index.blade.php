@@ -123,46 +123,97 @@
     <div x-show="tab === 'branding'" x-transition class="glass-card p-8" style="display:none">
         <div class="mb-6">
             <h3 class="font-semibold" style="color:#1e293b;">PDF Report & Invoice Branding</h3>
-            <p class="text-sm mt-1" style="color:#64748b;">Customize how your reports and invoices look. Logo, header, footer, and signature appear on all generated PDFs.</p>
+            <p class="text-sm mt-1" style="color:#64748b;">Upload up to 5 logos and drag them anywhere in the PDF Builder. The signature appears on all generated PDFs.</p>
         </div>
 
+        @php
+        // Load existing logos; migrate old single logo for labs that haven't switched yet
+        $existingLogos = json_decode($tenant->getSetting('report_logos', '[]'), true) ?: [];
+        if (empty($existingLogos) && $oldPath = $tenant->getSetting('report_logo')) {
+            $existingLogos = [['key' => 'logo_primary', 'label' => 'Logo', 'path' => $oldPath]];
+        }
+        $existingLogosForJs = collect($existingLogos)->map(fn($lg) => array_merge($lg, [
+            'url' => !empty($lg['path']) && file_exists(storage_path('app/public/' . $lg['path']))
+                ? asset('storage/' . $lg['path']) : null,
+        ]))->values()->toArray();
+        @endphp
+
         <form method="POST" action="{{ route('tenant.settings.branding', $currentTenant->slug) }}"
-              enctype="multipart/form-data" class="space-y-5">
+              enctype="multipart/form-data" class="space-y-6">
             @csrf
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                    <label class="form-label">Lab Logo</label>
-                    @if($tenant->getSetting('report_logo'))
-                    <div class="mb-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                        <img src="{{ Storage::url($tenant->getSetting('report_logo')) }}" alt="Logo" class="h-16 object-contain">
-                    </div>
-                    @endif
-                    <input type="file" name="report_logo" accept="image/*" class="glass-input text-sm py-2.5">
-                    <p class="text-white/25 text-xs mt-1">PNG or JPG, recommended 300×100px</p>
+            {{-- Multi-logo manager --}}
+            <div x-data="logoManager({{ json_encode($existingLogosForJs) }})">
+                <div class="flex items-center justify-between mb-3">
+                    <label class="form-label mb-0">Logos <span class="text-white/30 font-normal text-xs">(up to 5)</span></label>
+                    <button type="button" x-show="slots.length < 5" @click="add()"
+                            class="text-xs font-medium px-3 py-1.5 rounded-lg transition-all"
+                            style="color:#6366f1; background:rgba(99,102,241,0.08);"
+                            onmouseover="this.style.background='rgba(99,102,241,0.15)'"
+                            onmouseout="this.style.background='rgba(99,102,241,0.08)'">
+                        + Add Logo
+                    </button>
                 </div>
 
-                <div>
-                    <label class="form-label">Doctor/Lab Signature</label>
-                    @if($tenant->getSetting('report_signature'))
-                    <div class="mb-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                        <img src="{{ Storage::url($tenant->getSetting('report_signature')) }}" alt="Signature" class="h-12 object-contain">
-                    </div>
-                    @endif
-                    <input type="file" name="report_signature" accept="image/*" class="glass-input text-sm py-2.5">
-                    <p class="text-white/25 text-xs mt-1">PNG with transparent background preferred</p>
+                <div class="space-y-3">
+                    <template x-for="(s, i) in slots" :key="s.tempId">
+                        <div class="flex items-start gap-3 p-3 rounded-xl" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09);">
+                            {{-- Thumbnail --}}
+                            <div class="w-20 h-12 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden"
+                                 style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08);">
+                                <img x-show="s.preview || s.existing" :src="s.preview || s.existing"
+                                     class="w-full h-full object-contain">
+                                <span x-show="!s.preview && !s.existing" class="text-xs" style="color:rgba(255,255,255,0.2);">No image</span>
+                            </div>
+
+                            {{-- Fields --}}
+                            <div class="flex-1 space-y-2 min-w-0">
+                                <input type="hidden" :name="`logo_${i}_key`" :value="s.key">
+                                <input type="text" :name="`logo_${i}_label`" x-model="s.label"
+                                       class="glass-input text-sm w-full" placeholder="Logo name (e.g. Main Logo, Partner Logo)">
+                                <input type="file" :name="`logo_${i}_file`" accept="image/*"
+                                       class="glass-input text-xs py-2 w-full"
+                                       @change="previewFile($event, s)">
+                            </div>
+
+                            {{-- Remove --}}
+                            <button type="button" @click="remove(i)"
+                                    class="text-lg leading-none flex-shrink-0 mt-0.5 transition-colors"
+                                    style="color:rgba(239,68,68,0.45);"
+                                    onmouseover="this.style.color='rgba(239,68,68,0.9)'"
+                                    onmouseout="this.style.color='rgba(239,68,68,0.45)'"
+                                    title="Remove this logo">×</button>
+                        </div>
+                    </template>
                 </div>
+
+                <p x-show="slots.length === 0" class="text-sm mt-2" style="color:rgba(255,255,255,0.25);">
+                    No logos yet. Click "+ Add Logo" to upload one.
+                </p>
+                <p class="text-xs mt-2" style="color:rgba(255,255,255,0.25);">PNG or JPG, max 2 MB each. After saving, drag logos into position in the <a href="{{ route('tenant.settings.template-builder', $currentTenant->slug) }}" class="underline" style="color:#818cf8;">PDF Builder</a>.</p>
+            </div>
+
+            {{-- Signature --}}
+            <div>
+                <label class="form-label">Doctor / Lab Signature</label>
+                @if($tenant->getSetting('report_signature'))
+                <div class="mb-3 p-3 rounded-xl" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09);">
+                    <img src="{{ asset('storage/' . $tenant->getSetting('report_signature')) }}" alt="Signature" class="h-12 object-contain">
+                </div>
+                @endif
+                <input type="file" name="report_signature" accept="image/*" class="glass-input text-sm py-2.5">
+                <p class="text-white/25 text-xs mt-1">PNG with transparent background preferred</p>
             </div>
 
             <div>
-                <label class="form-label">Report Header</label>
+                <label class="form-label">Report Header HTML</label>
                 <textarea name="report_header_html" class="glass-input" rows="3"
                           placeholder="<h2>City Medical Laboratory</h2><p>123 Health Street | +1-555-0100</p>">{{ old('report_header_html', $tenant->getSetting('report_header_html')) }}</textarea>
-                <p class="text-white/25 text-xs mt-1">HTML supported. This appears at the top of every PDF report.</p>
+                <p class="text-white/25 text-xs mt-1">HTML supported. Appears at the top of every PDF report.</p>
             </div>
 
             <div>
-                <label class="form-label">Report Footer</label>
+                <label class="form-label">Report Footer HTML</label>
                 <textarea name="report_footer_html" class="glass-input" rows="2"
                           placeholder="<p>This report is confidential. Results valid for 30 days.</p>">{{ old('report_footer_html', $tenant->getSetting('report_footer_html')) }}</textarea>
                 <p class="text-white/25 text-xs mt-1">HTML supported. Appears at the bottom of every PDF.</p>
@@ -217,3 +268,33 @@
     @endcan
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function logoManager(existingLogos) {
+    return {
+        slots: (existingLogos || []).map((lg, i) => ({
+            tempId:   Date.now() + i,
+            key:      lg.key || '',
+            label:    lg.label || '',
+            existing: lg.url || null,
+            preview:  null,
+        })),
+        add() {
+            if (this.slots.length >= 5) return;
+            this.slots.push({ tempId: Date.now(), key: '', label: '', existing: null, preview: null });
+        },
+        remove(i) {
+            this.slots.splice(i, 1);
+        },
+        previewFile(event, slot) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => { slot.preview = e.target.result; };
+            reader.readAsDataURL(file);
+        },
+    };
+}
+</script>
+@endpush
