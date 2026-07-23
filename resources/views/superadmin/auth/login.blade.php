@@ -45,7 +45,7 @@
         <div class="flex items-center justify-between">
             <label class="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" name="remember" class="rounded border-white/20 bg-white/5 text-indigo-500">
-                <span class="text-sm text-white/60">Remember me</span>
+                <span class="text-sm text-white/60">Keep me signed in</span>
             </label>
         </div>
 

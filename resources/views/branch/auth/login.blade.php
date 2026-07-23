@@ -37,7 +37,7 @@
 
         <label class="flex items-center gap-2 text-sm text-white/50">
             <input type="checkbox" name="remember" value="1" class="rounded border-white/20 bg-white/5 text-indigo-500">
-            Remember me
+            Keep me signed in
         </label>
 
         <button type="submit" class="btn-primary w-full mt-2" :disabled="loading">
