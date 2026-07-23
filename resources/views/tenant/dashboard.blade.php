@@ -133,15 +133,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     new ApexCharts(document.querySelector('#patientChart'), {
         ...commonOpts,
-        series: [{ name: 'Patients', data: {{ $pgCounts ?: '[0]' }} }],
-        xaxis: { ...commonOpts.xaxis, categories: {{ $pgMonths ?: '["—"]' }} },
+        series: [{ name: 'Patients', data: {!! $pgCounts !!} }],
+        xaxis: { ...commonOpts.xaxis, categories: {!! $pgMonths !!} },
         colors: ['#6366f1'],
     }).render();
 
     new ApexCharts(document.querySelector('#revenueChart'), {
         ...commonOpts,
-        series: [{ name: 'Revenue', data: {{ $rvTotals ?: '[0]' }} }],
-        xaxis: { ...commonOpts.xaxis, categories: {{ $rvMonths ?: '["—"]' }} },
+        series: [{ name: 'Revenue', data: {!! $rvTotals !!} }],
+        xaxis: { ...commonOpts.xaxis, categories: {!! $rvMonths !!} },
         colors: ['#22c55e'],
     }).render();
 });

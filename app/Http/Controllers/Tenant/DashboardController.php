@@ -20,30 +20,43 @@ class DashboardController extends Controller
             'revenue'      => Invoice::where('status', 'paid')->whereMonth('paid_at', now()->month)->sum('amount_paid'),
         ];
 
-        // Monthly patient growth (last 6 months)
-        $patientGrowth = Patient::select(
-            DB::raw('MONTH(created_at) as month'),
-            DB::raw('YEAR(created_at) as year'),
-            DB::raw('COUNT(*) as count')
-        )
-        ->where('created_at', '>=', now()->subMonths(5)->startOfMonth())
-        ->groupBy('year', 'month')
-        ->orderBy('year')->orderBy('month')
-        ->get()
-        ->map(fn($r) => ['month' => date('M', mktime(0, 0, 0, $r->month, 1)), 'count' => $r->count]);
+        // Last 6 months as ordered Carbon periods (oldest → newest)
+        $periods = collect(range(5, 0))->map(fn($i) => now()->subMonths($i)->startOfMonth());
 
-        // Monthly revenue (last 6 months)
-        $revenueData = Invoice::where('status', 'paid')
-        ->where('paid_at', '>=', now()->subMonths(5)->startOfMonth())
+        // Monthly patient growth — zero-filled so all 6 months always appear
+        $rawGrowth = Patient::select(
+            DB::raw('YEAR(created_at) as y'),
+            DB::raw('MONTH(created_at) as m'),
+            DB::raw('COUNT(*) as cnt')
+        )
+        ->where('created_at', '>=', $periods->first())
+        ->groupBy(DB::raw('YEAR(created_at)'), DB::raw('MONTH(created_at)'))
+        ->orderBy(DB::raw('YEAR(created_at)'))->orderBy(DB::raw('MONTH(created_at)'))
+        ->get()
+        ->keyBy(fn($r) => $r->y . '-' . str_pad($r->m, 2, '0', STR_PAD_LEFT));
+
+        $patientGrowth = $periods->map(fn($p) => [
+            'month' => $p->format('M'),
+            'count' => (int) ($rawGrowth->get($p->format('Y-m'))?->cnt ?? 0),
+        ]);
+
+        // Monthly revenue — zero-filled
+        $rawRevenue = Invoice::where('status', 'paid')
+        ->where('paid_at', '>=', $periods->first())
         ->select(
-            DB::raw('MONTH(paid_at) as month'),
-            DB::raw('YEAR(paid_at) as year'),
+            DB::raw('YEAR(paid_at) as y'),
+            DB::raw('MONTH(paid_at) as m'),
             DB::raw('SUM(amount_paid) as total')
         )
-        ->groupBy('year', 'month')
-        ->orderBy('year')->orderBy('month')
+        ->groupBy(DB::raw('YEAR(paid_at)'), DB::raw('MONTH(paid_at)'))
+        ->orderBy(DB::raw('YEAR(paid_at)'))->orderBy(DB::raw('MONTH(paid_at)'))
         ->get()
-        ->map(fn($r) => ['month' => date('M', mktime(0, 0, 0, $r->month, 1)), 'total' => (float) $r->total]);
+        ->keyBy(fn($r) => $r->y . '-' . str_pad($r->m, 2, '0', STR_PAD_LEFT));
+
+        $revenueData = $periods->map(fn($p) => [
+            'month' => $p->format('M'),
+            'total' => (float) ($rawRevenue->get($p->format('Y-m'))?->total ?? 0),
+        ]);
 
         // Order status distribution
         $orderStatus = TestOrder::select('status', DB::raw('COUNT(*) as count'))
