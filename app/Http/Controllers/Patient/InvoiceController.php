@@ -20,7 +20,7 @@ class InvoiceController extends Controller
     {
         $patient = auth('patient')->user();
 
-        if ($invoice->patient_id !== $patient->id) {
+        if ((int) $invoice->patient_id !== $patient->id) {
             abort(403);
         }
 
